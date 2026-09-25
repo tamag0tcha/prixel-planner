@@ -1,0 +1,2210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prixel Planner</title>
+<!-- Google Fonts — loads when online, degrades to system fonts offline -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&family=IBM+Plex+Sans:wght@600&family=Syne:wght@400;700;800&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&family=IBM+Plex+Sans:wght@600&family=Syne:wght@400;700;800&display=swap"></noscript>
+<style>
+    /* Typography: IBM Plex Mono, IBM Plex Sans, Syne. System fallbacks apply offline. */
+
+  :root {
+    --bg: #F5F0E8;
+    --ink: #1A1A1A;
+    --yellow: #F5C842;
+    --red: #E8392A;
+    --blue: #2A6FE8;
+    --green: #2EAA5A;
+    --panel-bg: #FDFAF4;
+    --border: #1A1A1A;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Syne', 'Futura', 'Trebuchet MS', 'Arial Rounded MT Bold', sans-serif; font-size: 16px; background: var(--bg); color: var(--ink); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+  header { display: flex; align-items: center; justify-content: space-between; padding: 10px 20px; border-bottom: 2px solid var(--border); background: var(--ink); color: var(--bg); flex-shrink: 0; }
+  header h1 { font-size: 1.25rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+  .header-actions { display: flex; gap: 8px; align-items: center; }
+  .hdr-btn { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: 1.5px solid rgba(255,255,255,0.4); cursor: pointer; background: transparent; color: var(--bg); transition: all 0.12s; position: relative; }
+  .hdr-btn:hover { background: rgba(255,255,255,0.15); border-color: var(--bg); }
+  .hdr-btn.active { background: var(--bg); color: var(--ink); }
+  .hdr-btn svg { width: 16px; height: 16px; display: block; }
+  .hdr-btn[title]:hover::after { content: attr(title); position: absolute; top: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); font-family: 'IBM Plex Mono', 'Menlo', 'Consolas', 'Courier New', monospace; font-size: 11px; white-space: nowrap; padding: 3px 7px; pointer-events: none; z-index: 300; }
+
+  .app-body { display: flex; flex: 1; overflow: hidden; }
+
+  /* FLOATING PIECES PANEL */
+  #piecesPanel {
+    position: absolute; top: calc(48px + 16px); left: 16px; z-index: 100;
+    background: var(--panel-bg); border: 2px solid var(--ink);
+    box-shadow: 5px 5px 0 var(--ink); width: 300px;
+    display: flex; flex-direction: column;
+    max-height: calc(100% - 48px - 70px);
+  }
+  #piecesPanel .fp-header {
+    background: var(--ink); color: var(--bg); padding: 6px 10px; flex-shrink: 0;
+    font-family: 'IBM Plex Mono', 'Menlo', 'Consolas', 'Courier New', monospace; font-size: 0.875rem; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  .sidebar-section { padding: 10px 12px 6px; border-bottom: 1.5px solid rgba(0,0,0,0.12); flex-shrink: 0; }
+  .sidebar-label { font-family: 'IBM Plex Mono', 'Menlo', 'Consolas', 'Courier New', monospace; font-size: 0.875rem; font-weight: 700; text-transform: uppercase; opacity: 0.35; margin-bottom: 6px; }
+  .color-filter { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 2px; }
+  .color-dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: transform 0.1s; display: flex; align-items: center; justify-content: center; font-size: 11px; color: white; font-weight: 700; }
+  .color-dot:hover { transform: scale(1.15); }
+  .color-dot.active { border-color: var(--ink); transform: scale(1.1); }
+  .color-dot.all { background: var(--ink); font-size: 10px; letter-spacing: -0.5px; }
+  .pieces-list { flex: 1; overflow-y: auto; padding: 6px 8px; display: flex; flex-direction: column; gap: 3px; min-height: 0; }
+  .piece-item { display: flex; align-items: center; gap: 8px; padding: 5px 7px; border: 1.5px solid transparent; cursor: pointer; transition: all 0.1s; border-radius: 2px; }
+  .piece-item:hover { border-color: var(--ink); background: rgba(0,0,0,0.04); }
+  .piece-item.selected { border-color: var(--ink); background: var(--ink); color: var(--bg); }
+  .piece-preview { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; }
+  .piece-info { flex: 1; min-width: 0; }
+  .piece-id { font-family: 'IBM Plex Mono', 'Menlo', 'Consolas', 'Courier New', monospace; font-size: 0.875rem; font-weight: 700; opacity: 0.35; }
+  .piece-name { font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif, sans-serif; font-size: 0.875rem; font-weight: 600; white-space: nowrap; }
+  .piece-size { font-family: 'IBM Plex Mono', 'Menlo', 'Consolas', 'Courier New', monospace; font-size: 0.875rem; opacity: 0.45; }
+  .pieces-list::-webkit-scrollbar { width: 7px; }
+  .pieces-list::-webkit-scrollbar-track { background: transparent; }
+  .pieces-list::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-right: 3px solid transparent; background-clip: padding-box; }
+
+  /* FLOATING PARTS LIST PANEL */
+  #partsListPanel {
+    position: absolute; top: calc(48px + 16px); right: 16px; z-index: 100;
+    background: var(--panel-bg); border: 2px solid var(--ink);
+    box-shadow: 5px 5px 0 var(--ink); width: 180px;
+    display: none; flex-direction: column;
+    max-height: calc(100% - 48px - 70px);
+  }
+  #partsListPanel.visible { display: flex; }
+  #partsListPanel .pl-header {
+    background: var(--ink); color: var(--bg); padding: 6px 10px; flex-shrink: 0;
+    font-size: 0.875rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  #partsListPanel .pl-close { background: transparent; border: none; color: var(--bg); cursor: pointer; font-size: 16px; line-height: 1; padding: 0 2px; opacity: 0.6; }
+  #partsListPanel .pl-close:hover { opacity: 1; }
+  #partsListPanel .pl-body { overflow-y: auto; flex: 1; padding: 6px 10px; display: flex; flex-direction: column; gap: 2px; min-height: 0; }
+  #partsListPanel .pl-body::-webkit-scrollbar { width: 4px; }
+  #partsListPanel .pl-body::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); }
+  .palette-row { display: flex; gap: 2px; align-items: center; padding: 1px 0; }
+  .palette-row-label { font-family: 'IBM Plex Mono', 'Menlo', 'Consolas', 'Courier New', monospace; font-size: 0.875rem; width: 28px; flex-shrink: 0; font-weight: 700; }
+  .palette-count { font-family: 'IBM Plex Mono', 'Menlo', 'Consolas', 'Courier New', monospace; font-size: 0.875rem; font-weight: 700; text-align: right; padding: 2px 6px; border: 1px solid rgba(0,0,0,0.1); flex: 1; }
+
+  /* MAIN */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+
+  /* TOOLBAR */
+  .toolbar { display: flex; align-items: center; gap: 10px; padding: 7px 14px; border-bottom: 1.5px solid rgba(0,0,0,0.12); flex-shrink: 0; flex-wrap: wrap; }
+  .tool-group { display: flex; gap: 3px; }
+  .tool-btn.btn-danger { color: #ff6b5b; border-color: #ff6b5b; }
+  .tool-btn.btn-danger:hover { background: #ff6b5b; color: white; border-color: #ff6b5b; }
+  .tool-btn { font-family: 'IBM Plex Mono', 'Menlo', 'Consolas', 'Courier New', monospace; font-size: 0.875rem; font-weight: 700; letter-spacing: 0.06em; padding: 5px 12px; border: 1.5px solid rgba(0,0,0,0.2); background: transparent; cursor: pointer; text-transform: uppercase; transition: all 0.1s; color: var(--ink); }
+  .tool-btn:hover { border-color: var(--ink); background: rgba(0,0,0,0.06); }
+  .tool-btn.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .icon-btn { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: 1.5px solid rgba(0,0,0,0.2); background: transparent; cursor: pointer; transition: all 0.1s; color: var(--ink); border-radius: 2px; padding: 0; }
+  .icon-btn:hover { border-color: var(--ink); background: rgba(0,0,0,0.06); }
+  .icon-btn.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .icon-btn svg { width: 16px; height: 16px; display: block; }
+  .color-mode-group { display: flex; align-items: center; gap: 6px; }
+  .color-mode-label { font-family: 'IBM Plex Mono', 'Menlo', 'Consolas', 'Courier New', monospace; font-size: 0.875rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.5; }
+  .separator { width: 1px; height: 24px; background: rgba(0,0,0,0.15); }
+
+  .mirror-note { position: absolute; top: 47px; left: 50%; transform: translateX(-50%); background: var(--yellow); color: var(--ink); font-family: 'IBM Plex Mono', 'Menlo', 'Consolas', 'Courier New', monospace; font-size: 0.875rem; padding: 6px 16px; text-align: center; font-weight: 700; letter-spacing: 0.06em; display: none; z-index: 50; pointer-events: none; white-space: nowrap; box-shadow: 4px 4px 0 var(--ink); }
+
+  /* CANVAS WRAPPER */
+  .canvas-wrapper { flex: 1; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: 28px; background: var(--bg); position: relative; cursor: default; }
+  .canvas-inner { display: flex; align-items: center; min-width: max-content; padding-left: 332px; will-change: transform; }
+  .plates-row { display: flex; gap: 32px; align-items: center; }
+
+  /* PLATE */
+  .plate-container { flex-shrink: 0; }
+  .plate-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; gap: 8px; }
+  .plate-name { font-family: 'IBM Plex Mono', 'Menlo', 'Consolas', 'Courier New', monospace; font-size: 0.875rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; flex-shrink: 0; }
+  .plate-remove { font-size: 16px; font-weight: 400; line-height: 1; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border: 1.5px solid #cc4433; background: transparent; cursor: pointer; color: #cc4433; transition: all 0.1s; flex-shrink: 0; }
+  .plate-remove:hover { background: #cc4433; color: white; }
+  .plate { position: relative; border: 2.5px solid var(--ink); background: white; box-shadow: 5px 5px 0 var(--ink); user-select: none; transition: opacity 0.15s, box-shadow 0.15s; }
+  .plate.is-inactive { opacity: 0.45; box-shadow: 3px 3px 0 rgba(0,0,0,0.15); }
+
+  /* SHARED INK PALETTE WINDOW — upper-left of canvas area */
+  #inkPaletteWindow {
+    position: absolute;
+    top: calc(48px + 16px); left: 332px;
+    z-index: 100;
+    background: var(--panel-bg);
+    color: var(--ink);
+    border: 2px solid var(--ink);
+    box-shadow: 5px 5px 0 var(--ink);
+    width: 224px;
+    display: none;
+    font-family: 'IBM Plex Mono', 'Menlo', 'Consolas', 'Courier New', monospace;
+  }
+  #inkPaletteWindow.visible { display: block; }
+  #inkPaletteWindow .ipw-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 10px;
+    background: var(--ink); color: var(--bg);
+    font-size: 0.875rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  #inkPaletteWindow .ipw-close {
+    background: transparent; border: none; color: var(--bg); cursor: pointer;
+    font-size: 16px; line-height: 1; padding: 0 2px; opacity: 0.6;
+  }
+  #inkPaletteWindow .ipw-close:hover { opacity: 1; }
+
+  /* Swatch grid inside palette */
+  #inkPaletteWindow .ipw-swatches {
+    padding: 10px 10px 6px;
+  }
+  .ipw-row-label { font-family: 'IBM Plex Mono', 'Menlo', 'Consolas', 'Courier New', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.4; margin-bottom: 5px; }
+  .ipw-swatch-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; max-width: calc(6 * 28px + 5 * 6px); }
+  .ipw-divider { height: 1px; background: rgba(0,0,0,0.1); margin: 4px 0 10px; }
+  .palette-swatch-wrap { position: relative; width: 28px; height: 28px; }
+  .palette-swatch {
+    width: 28px; height: 28px;
+    border: none; cursor: pointer;
+    transition: all 0.1s; border-radius: 2px; display: block;
+  }
+  .palette-swatch:hover { transform: scale(1.08); }
+  .palette-swatch.active { outline: 2px solid rgba(0,0,0,0.25); outline-offset: 1px; }
+  .palette-swatch.selected { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+  /* Icon tray — always visible below swatches */
+  .ipw-tray {
+    display: flex; align-items: center; gap: 4px;
+    padding: 6px 10px;
+    border-top: 1.5px solid rgba(0,0,0,0.08);
+    border-bottom: 1.5px solid rgba(0,0,0,0.1);
+  }
+  .ipw-tray-btn {
+    display: flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px;
+    border: 1.5px solid rgba(0,0,0,0.15);
+    background: transparent; cursor: pointer; border-radius: 2px;
+    color: rgba(0,0,0,0.45); transition: all 0.12s;
+    padding: 0;
+  }
+  .ipw-tray-btn:hover:not(:disabled) { border-color: #cc4433; color: #cc4433; background: rgba(204,68,51,0.06); }
+  .ipw-tray-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+  .ipw-tray-btn svg { width: 14px; height: 14px; display: block; }
+  .ipw-tray-label {
+    font-family: 'IBM Plex Mono', 'Menlo', 'Consolas', 'Courier New', monospace; font-size: 0.875rem;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    opacity: 0.35; flex: 1; text-align: right;
+  }
+  .palette-swatch-add {
+    width: 28px; height: 28px;
+    border: 1.5px dashed rgba(0,0,0,0.25);
+    background: transparent; cursor: pointer; border-radius: 2px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; color: rgba(0,0,0,0.3); line-height: 1;
+    transition: all 0.12s;
+  }
+  .palette-swatch-add:hover { border-color: var(--ink); color: var(--ink); background: rgba(0,0,0,0.04); }
+
+  /* Color wheel section inside palette */
+  #inkPaletteWindow .ipw-picker { padding: 10px; }
+  #inkPaletteWindow .ipw-picker-title {
+    font-size: 0.875rem; letter-spacing: 0.1em; text-transform: uppercase;
+    opacity: 0.45; margin-bottom: 8px;
+  }
+  #inkPaletteWindow canvas { display: block; cursor: crosshair; border: 1px solid rgba(0,0,0,0.1); }
+  #inkPaletteWindow .ipw-lightness { margin-top: 8px; }
+  #inkPaletteWindow .ipw-lightness label { font-size: 0.875rem; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.45; display: block; margin-bottom: 3px; }
+  #inkPaletteWindow input[type=range] { width: 100%; accent-color: var(--ink); cursor: pointer; }
+  #inkPaletteWindow .ipw-preview-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  #inkPaletteWindow .ipw-preview { width: 28px; height: 28px; border: 1.5px solid rgba(0,0,0,0.15); flex-shrink: 0; border-radius: 2px; }
+  #inkPaletteWindow .ipw-hex { font-size: 0.875rem; flex: 1; background: white; border: 1px solid rgba(0,0,0,0.15); color: var(--ink); padding: 4px 6px; font-family: 'IBM Plex Mono', 'Menlo', 'Consolas', 'Courier New', monospace; text-transform: uppercase; }
+  #inkPaletteWindow .ipw-add-btn {
+    width: 100%; margin-top: 8px;
+    font-family: 'IBM Plex Mono', 'Menlo', 'Consolas', 'Courier New', monospace; font-size: 0.875rem; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase; padding: 6px;
+    background: var(--ink); color: var(--bg); border: none; cursor: pointer; transition: background 0.1s;
+  }
+  #inkPaletteWindow .ipw-add-btn:hover { background: #333; }
+
+  /* Active plate ink indicator — small colored dot next to plate name */
+  .plate-ink-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    border: 1.5px solid rgba(0,0,0,0.2); flex-shrink: 0; display: none;
+  }
+  .plate-ink-dot.visible { display: block; }
+
+  /* ADD PLATE — vertically centered, 64px gap after last plate */
+  .add-plate-wrap { flex-shrink: 0; display: flex; align-items: center; padding-left: 64px; }
+  .add-plate-btn { width: 52px; height: 52px; border: 2px dashed rgba(0,0,0,0.22); background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 26px; color: rgba(0,0,0,0.28); transition: all 0.15s; border-radius: 2px; }
+  .add-plate-btn:hover { border-color: var(--ink); color: var(--ink); background: rgba(0,0,0,0.04); }
+
+  /* OVERLAY WINDOW — fixed upper-right of the canvas-wrapper area */
+  #overlayWindow {
+    position: absolute;
+    top: calc(48px + 16px); right: 16px;
+    z-index: 100;
+    background: white;
+    border: 2px solid #8B3DBF;
+    box-shadow: 5px 5px 0 #8B3DBF;
+    display: none;
+    max-height: calc(100% - 48px - 32px);
+    overflow-y: auto;
+  }
+  #overlayWindow.visible { display: block; }
+  #overlayWindow::-webkit-scrollbar { width: 5px; }
+  #overlayWindow::-webkit-scrollbar-thumb { background: rgba(139,61,191,0.3); }
+  #overlayWindow .ow-header {
+    position: sticky; top: 0; z-index: 1;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 5px 10px;
+    background: #8B3DBF; color: white;
+    font-family: 'IBM Plex Mono', 'Menlo', 'Consolas', 'Courier New', monospace; font-size: 0.875rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  #overlayWindow .ow-close {
+    background: transparent; border: none; color: white; cursor: pointer;
+    font-size: 16px; line-height: 1; padding: 0 2px;
+  }
+
+  /* ─── DESIGNS PANEL ──────────────────────────────────────────────────────── */
+  #designsPanel {
+    position: absolute; top: calc(48px + 16px); right: 16px; z-index: 200;
+    background: var(--panel-bg); border: 2px solid var(--ink);
+    box-shadow: 5px 5px 0 var(--ink); width: 340px;
+    display: none; flex-direction: column;
+    max-height: calc(100% - 48px - 70px);
+    font-family: 'IBM Plex Mono', 'Menlo', 'Consolas', 'Courier New', monospace;
+  }
+  #designsPanel.visible { display: flex; }
+  #designsPanel .dp-header {
+    background: var(--ink); color: var(--bg); padding: 8px 12px;
+    font-size: 0.875rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+    display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+  }
+  #designsPanel .dp-close { background: transparent; border: none; color: var(--bg); cursor: pointer; font-size: 16px; line-height: 1; padding: 0 2px; opacity: 0.6; }
+  #designsPanel .dp-close:hover { opacity: 1; }
+  #designsPanel .dp-body { overflow-y: auto; flex: 1; padding: 12px; min-height: 0; max-height: 480px; }
+  #designsPanel .dp-body::-webkit-scrollbar { width: 7px; }
+  #designsPanel .dp-body::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-right: 3px solid transparent; background-clip: padding-box; }
+  #designsPanel .dp-empty { font-size: 14px; opacity: 0.4; text-align: center; padding: 24px 0; }
+  #designsPanel .dp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .dp-card {
+    border: 2px solid var(--ink); background: white; cursor: pointer;
+    transition: box-shadow 0.1s; position: relative; overflow: hidden;
+  }
+  .dp-card:hover { box-shadow: 3px 3px 0 var(--ink); }
+  .dp-card.active-design { box-shadow: 4px 4px 0 var(--ink); outline: 2px solid #2A6FE8; outline-offset: -2px; }
+  .dp-card canvas { display: block; width: 100%; height: auto; }
+  .dp-card-hover {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: rgba(20,20,20,0.88); color: white;
+    padding: 8px 10px; font-family: 'IBM Plex Mono', 'Menlo', 'Consolas', 'Courier New', monospace;
+    transform: translateY(100%); transition: transform 0.18s ease;
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  .dp-card:hover .dp-card-hover { transform: translateY(0); }
+  .dp-card-hover-name { font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dp-card-hover-meta { font-size: 11px; opacity: 0.6; }
+  .dp-card-hover-actions { display: flex; gap: 4px; margin-top: 5px; }
+  .dp-card-btn { flex: 1; font-family: 'IBM Plex Mono', 'Menlo', 'Consolas', 'Courier New', monospace; font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.06em; padding: 3px 0;
+    border: 1.5px solid currentColor; background: transparent; cursor: pointer; transition: all 0.1s; }
+  .dp-card-btn.load { color: white; }
+  .dp-card-btn.load:hover { background: white; color: #1A1A1A; }
+  .dp-card-btn.load:disabled { opacity: 0.4; cursor: default; }
+  .dp-card-btn.del { color: #ff6b5b; display: flex; align-items: center; justify-content: center; }
+  .dp-card-btn.del:hover { background: #ff6b5b; color: white; }
+  /* Name prompt overlay inside panel */
+  #dpNamePrompt { display: none; padding: 12px; border-top: 1.5px solid rgba(0,0,0,0.1); flex-shrink: 0; }
+  #dpNamePrompt.visible { display: block; }
+  #dpNamePrompt label { font-size: 13px; font-weight: 700; display: block; margin-bottom: 6px; letter-spacing: 0.06em; text-transform: uppercase; }
+  #dpNameInput { width: 100%; box-sizing: border-box; font-family: 'IBM Plex Mono', 'Menlo', 'Consolas', 'Courier New', monospace; font-size: 14px;
+    border: 2px solid var(--ink); padding: 5px 8px; background: var(--bg); color: var(--ink); outline: none; }
+  #dpNameInput:focus { outline: 2px solid #2A6FE8; outline-offset: -2px; }
+  #dpNameActions { display: flex; gap: 6px; margin-top: 8px; }
+  #dpNameActions button { flex: 1; font-family: 'IBM Plex Mono', 'Menlo', 'Consolas', 'Courier New', monospace; font-size: 13px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.06em; padding: 5px 0;
+    border: 1.5px solid currentColor; background: transparent; cursor: pointer; transition: all 0.1s; }
+  #dpSaveConfirm { color: var(--ink); }
+  #dpSaveConfirm:hover { background: var(--ink); color: var(--bg); }
+  #dpSaveCancel { color: #cc4433; }
+  #dpSaveCancel:hover { background: #cc4433; color: white; }
+
+
+  .status-bar { display: flex; gap: 16px; padding: 10px 16px; border-top: 1.5px solid rgba(0,0,0,0.12); font-family: 'IBM Plex Mono', 'Menlo', 'Consolas', 'Courier New', monospace; font-size: 0.875rem; opacity: 0.55; flex-shrink: 0; }
+
+  /* CONTEXT MENU */
+  #ctxMenu { position: fixed; z-index: 1000; background: var(--ink); color: var(--bg); border: 2px solid rgba(255,255,255,0.15); box-shadow: 4px 4px 0 rgba(0,0,0,0.3); min-width: 210px; display: none; font-family: 'IBM Plex Mono', 'Menlo', 'Consolas', 'Courier New', monospace; font-size: 0.875rem; }
+  #ctxMenu.visible { display: block; }
+  .ctx-header { padding: 6px 10px 4px; font-size: 0.875rem; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.45; border-bottom: 1px solid rgba(255,255,255,0.15); }
+  .ctx-item { display: flex; align-items: center; gap: 8px; padding: 5px 10px; cursor: pointer; transition: background 0.08s; white-space: nowrap; }
+  .ctx-item:hover { background: rgba(255,255,255,0.12); }
+  .ctx-item.active-piece { background: var(--yellow); color: var(--ink); }
+  .ctx-piece-dot { width: 10px; height: 10px; border-radius: 1px; flex-shrink: 0; }
+  .ctx-separator { height: 1px; background: rgba(255,255,255,0.15); margin: 3px 0; }
+  .ctx-action { color: #ff7a6b; }
+  .ctx-filter-row { display: flex; gap: 4px; padding: 5px 10px; border-bottom: 1px solid rgba(255,255,255,0.1); flex-wrap: wrap; }
+  .ctx-filter-btn { font-family: 'IBM Plex Mono', 'Menlo', 'Consolas', 'Courier New', monospace; font-size: 0.875rem; font-weight: 700; padding: 2px 6px; border: 1px solid rgba(255,255,255,0.3); background: transparent; color: var(--bg); cursor: pointer; letter-spacing: 0.06em; text-transform: uppercase; transition: all 0.08s; }
+  .ctx-filter-btn:hover, .ctx-filter-btn.active { background: rgba(255,255,255,0.2); border-color: white; }
+  .ctx-pieces-scroll { max-height: 200px; overflow-y: auto; }
+  .ctx-pieces-scroll::-webkit-scrollbar { width: 3px; }
+  .ctx-pieces-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Prixel Planner</h1>
+  </div>
+  <div class="header-actions">
+    <!-- New file — outlined -->
+    <button class="hdr-btn" id="newBtn" onclick="newProject()" title="New Project">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 2h6l3 3v9H4V2z"/>
+        <polyline points="9,2 9,5 13,5"/>
+        <line x1="8" y1="6" x2="8" y2="12"/>
+        <line x1="5" y1="9" x2="11" y2="9"/>
+      </svg>
+    </button>
+    <!-- Save — solid floppy with tab cutout and shelf -->
+    <button class="hdr-btn" id="saveBtn" onclick="saveDesign()" title="Save">
+      <svg viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+        <path d="M2 2.5A1.5 1.5 0 0 1 3.5 1h7.086a1 1 0 0 1 .707.293l2.414 2.414A1 1 0 0 1 14 4.414V13.5A1.5 1.5 0 0 1 12.5 15h-9A1.5 1.5 0 0 1 2 13.5V2.5z"/>
+        <rect x="5" y="1" width="6" height="3.5" fill="var(--ink)"/>
+        <rect x="6.5" y="1" width="3" height="2" fill="currentColor"/>
+        <rect x="3.5" y="9" width="9" height="4.5" rx="0.5" fill="var(--ink)"/>
+      </svg>
+    </button>
+    <!-- Designs — solid filled grid -->
+    <button class="hdr-btn" id="designsBtn" onclick="toggleDesignsPanel()" title="Designs">
+      <svg viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+        <rect x="1.5" y="1.5" width="5.5" height="5.5" rx="0.5"/>
+        <rect x="9" y="1.5" width="5.5" height="5.5" rx="0.5"/>
+        <rect x="1.5" y="9" width="5.5" height="5.5" rx="0.5"/>
+        <rect x="9" y="9" width="5.5" height="5.5" rx="0.5"/>
+      </svg>
+    </button>
+    <div style="width:1px;background:rgba(255,255,255,0.2);height:20px;margin:0 4px"></div>
+    <!-- Parts List — solid -->
+    <button class="hdr-btn" id="partsListBtn" onclick="togglePartsList()" title="Parts List">
+      <svg viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+        <rect x="4" y="3" width="9" height="2" rx="1"/>
+        <rect x="4" y="7" width="9" height="2" rx="1"/>
+        <rect x="4" y="11" width="9" height="2" rx="1"/>
+        <circle cx="2" cy="4" r="1"/>
+        <circle cx="2" cy="8" r="1"/>
+        <circle cx="2" cy="12" r="1"/>
+      </svg>
+    </button>
+    <!-- Export PNG — arrow pointing up = export -->
+    <button class="hdr-btn" id="exportBtn" title="Export PNG">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="8" y1="10" x2="8" y2="2"/>
+        <polyline points="5,5 8,2 11,5"/>
+        <path d="M3 12h10v2H3z" fill="currentColor" stroke="none"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<div class="app-body">
+
+  <div class="main">
+    <div class="toolbar">
+      <div class="tool-group">
+        <!-- Place -->
+        <button class="icon-btn active" id="toolPlace" onclick="setTool('place')" title="Place (P)">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="2" width="5.5" height="5.5" rx="0.5"/>
+            <rect x="8.5" y="8.5" width="5.5" height="5.5" rx="0.5"/>
+            <rect x="8.5" y="2" width="5.5" height="5.5" rx="0.5" stroke-opacity="0.35"/>
+            <rect x="2" y="8.5" width="5.5" height="5.5" rx="0.5" stroke-opacity="0.35"/>
+          </svg>
+        </button>
+        <!-- Erase -->
+        <button class="icon-btn" id="toolErase" onclick="setTool('erase')" title="Erase (E)">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <circle cx="8" cy="8" r="6"/>
+            <line x1="3.5" y1="3.5" x2="12.5" y2="12.5"/>
+          </svg>
+        </button>
+        <!-- Select -->
+        <button class="icon-btn" id="toolSelect" onclick="setTool('select')" title="Select (S)">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="2" width="12" height="12" rx="0.5" stroke-dasharray="2.5 2"/>
+          </svg>
+        </button>
+        <!-- Mirror -->
+        <button class="icon-btn" id="mirrorBtn" onclick="toggleMirror()" title="Mirror (M)">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="8" y1="2" x2="8" y2="14"/>
+            <polyline points="5,5 2,8 5,11"/>
+            <polyline points="11,5 14,8 11,11"/>
+          </svg>
+        </button>
+      </div>
+      <div class="separator"></div>
+      <div class="color-mode-group">
+        <span class="color-mode-label">Color</span>
+        <div class="tool-group">
+          <!-- Pieces mode — lego-style block -->
+          <button class="icon-btn active" id="colorNativeBtn" onclick="setColorMode('native')" title="Pieces color mode">
+            <svg viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+              <rect x="1" y="6" width="14" height="9" rx="1"/>
+              <rect x="3" y="4" width="3" height="3" rx="0.75"/>
+              <rect x="10" y="4" width="3" height="3" rx="0.75"/>
+            </svg>
+          </button>
+          <!-- Ink mode — ink drop -->
+          <button class="icon-btn" id="colorInkBtn" onclick="setColorMode('ink')" title="Ink color mode">
+            <svg viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+              <path d="M8 2C8 2 3.5 7.5 3.5 10.5a4.5 4.5 0 0 0 9 0C12.5 7.5 8 2 8 2z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="separator"></div>
+      <button class="tool-btn btn-danger" id="clearBtn" onclick="clearActivePlate()">Clear Plate</button>
+      <div class="separator"></div>
+      <button class="tool-btn" id="overlayBtn" onclick="toggleOverlay()" style="display:none" title="Show all plates overlaid">Overlay: OFF</button>
+    </div>
+
+    <div class="mirror-note" id="mirrorNote"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:middle;margin-right:6px"><line x1="8" y1="2" x2="8" y2="14"/><polyline points="5,5 2,8 5,11"/><polyline points="11,5 14,8 11,11"/></svg>MIRROR MODE ON — Design shown mirrored as it will print</div>
+
+    <!-- Floating panels — children of .main (position:relative), so they don't scroll with canvas -->
+    <!-- Floating Pieces Panel -->
+    <div id="piecesPanel">
+      <div class="fp-header">Pieces</div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Filter by Category</div>
+        <div class="color-filter">
+          <div class="color-dot all active" data-filter="all" title="All">ALL</div>
+          <div class="color-dot" data-filter="yellow" style="background:var(--yellow)" title="Squares & Rectangles"></div>
+          <div class="color-dot" data-filter="red" style="background:var(--red)" title="Triangles"></div>
+          <div class="color-dot" data-filter="blue" style="background:var(--blue)" title="Circles & Arcs"></div>
+          <div class="color-dot" data-filter="green" style="background:var(--green)" title="Lines"></div>
+          <div class="color-dot" data-filter="orange" style="background:#F07A28" title="Half Round Square"></div>
+        </div>
+      </div>
+      <div class="pieces-list" id="piecesList"></div>
+
+    </div>
+    <!-- Floating Parts List Panel -->
+    <div id="partsListPanel">
+      <div class="pl-header">
+        <span>Parts List</span>
+        <button class="pl-close" onclick="togglePartsList()">✕</button>
+      </div>
+      <div class="pl-body" id="usagePanel"></div>
+    </div>
+    <!-- Ink Palette Window -->
+    <div id="inkPaletteWindow">
+      <div class="ipw-header">
+        <span>Ink Colors</span>
+      </div>
+      <div class="ipw-swatches" id="ipwSwatches"></div>
+      <div class="ipw-tray">
+        <button class="ipw-tray-btn" id="trayDeleteSelected" onclick="deleteSelectedSwatch()" title="Delete selected swatch" disabled>
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3,5 3,14 13,14 13,5"/>
+            <line x1="1" y1="5" x2="15" y2="5"/>
+            <line x1="6" y1="5" x2="6" y2="2"/>
+            <line x1="10" y1="5" x2="10" y2="2"/>
+            <line x1="6" y1="2" x2="10" y2="2"/>
+            <line x1="6" y1="8" x2="6" y2="12"/>
+            <line x1="10" y1="8" x2="10" y2="12"/>
+          </svg>
+        </button>
+        <button class="ipw-tray-btn" id="trayDeleteUnused" onclick="deleteUnusedSwatches()" title="Delete all unused swatches">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="1" y="1" width="5.5" height="5.5" rx="0.5"/>
+            <rect x="9.5" y="1" width="5.5" height="5.5" rx="0.5"/>
+            <rect x="1" y="9.5" width="5.5" height="5.5" rx="0.5"/>
+            <line x1="10" y1="10" x2="14.5" y2="14.5"/>
+            <line x1="14.5" y1="10" x2="10" y2="14.5"/>
+          </svg>
+        </button>
+        <span class="ipw-tray-label" id="trayLabel">—</span>
+      </div>
+      <div class="ipw-picker" id="ipwPicker" style="display:none">
+        <div class="ipw-picker-title">Add Custom Color</div>
+        <canvas id="cpWheel" width="200" height="200"></canvas>
+        <div class="ipw-lightness">
+          <label>Lightness</label>
+          <input type="range" id="cpLightness" min="10" max="95" value="50">
+        </div>
+        <div class="ipw-preview-row">
+          <div class="ipw-preview" id="cpPreview"></div>
+          <input class="ipw-hex" id="cpHex" type="text" maxlength="7" value="#808080">
+        </div>
+        <button class="ipw-add-btn" onclick="confirmColor()">Add</button>
+      </div>
+    </div>
+    <!-- Designs Panel -->
+    <div id="designsPanel">
+      <div class="dp-header">
+        <span>Designs</span>
+        <button class="dp-close" onclick="toggleDesignsPanel()">✕</button>
+      </div>
+      <div class="dp-body" id="dpBody"></div>
+      <div id="dpNamePrompt">
+        <label>Design Name</label>
+        <input id="dpNameInput" type="text" placeholder="e.g. My Layout" maxlength="40" onkeydown="if(event.key==='Enter')dpConfirmSave();if(event.key==='Escape')dpCancelSave();">
+        <div id="dpNameActions">
+          <button id="dpSaveConfirm" onclick="dpConfirmSave()">Save</button>
+          <button id="dpSaveCancel" onclick="dpCancelSave()">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay Window -->
+    <div id="overlayWindow">
+      <div class="ow-header">
+        <span>All Plates</span>
+        <button class="ow-close" onclick="toggleOverlay()" title="Close overlay">✕</button>
+      </div>
+      <canvas id="overlayCanvas"></canvas>
+    </div>
+
+    <!-- Canvas viewport — overflow hidden, panned via transform -->
+    <div class="canvas-wrapper" id="canvasWrapper">
+      <div class="canvas-inner" id="canvasInner">
+        <div class="plates-row" id="platesRow"></div>
+        <div class="add-plate-wrap">
+          <button class="add-plate-btn" onclick="addPlate()" title="Add a new plate">+</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="status-bar">
+      <span id="cursorPos">—</span>
+      <span id="selectedInfo">Click a piece to select it</span>
+      <span id="pieceCount">0 pieces placed</span>
+    </div>
+  </div>
+
+</div>
+
+<div id="ctxMenu">
+  <div class="ctx-header" id="ctxHeader">Right-click menu</div>
+  <div class="ctx-filter-row">
+    <button class="ctx-filter-btn active" onclick="ctxSetFilter('all',this)">All</button>
+    <button class="ctx-filter-btn" onclick="ctxSetFilter('yellow',this)" style="color:var(--yellow);border-color:var(--yellow)">■</button>
+    <button class="ctx-filter-btn" onclick="ctxSetFilter('red',this)" style="color:#ff7a6b;border-color:#ff7a6b">▲</button>
+    <button class="ctx-filter-btn" onclick="ctxSetFilter('blue',this)" style="color:#7aabff;border-color:#7aabff">●</button>
+    <button class="ctx-filter-btn" onclick="ctxSetFilter('green',this)" style="color:#6fdd9a;border-color:#6fdd9a">—</button>
+  </div>
+  <div class="ctx-pieces-scroll" id="ctxPieces"></div>
+  <div class="ctx-separator"></div>
+  <div class="ctx-item ctx-action" id="ctxErase" onclick="ctxDoErase()">✕ Remove piece here</div>
+</div>
+
+<script>
+// ─── PIECE DEFINITIONS ───────────────────────────────────────────────────────
+const PIECES = [
+  { id:'PX-001', name:'Square',                        w:1, h:1, color:'yellow', shape:'rect' },
+  { id:'PX-002', name:'Rectangle',                     w:1, h:2, color:'yellow', shape:'rect' },
+  { id:'PX-003', name:'Square',                        w:2, h:2, color:'yellow', shape:'rect' },
+  { id:'PX-004', name:'Rectangle',                     w:1, h:4, color:'yellow', shape:'rect' },
+  { id:'PX-005', name:'Right Triangle',                w:1, h:1, color:'red',    shape:'tri-tl' },
+  { id:'PX-006', name:'Right Triangle',                w:2, h:1, color:'red',    shape:'tri-iso' },
+  { id:'PX-007', name:'Right Triangle',                w:2, h:2, color:'red',    shape:'tri-tl' },
+  { id:'PX-008', name:'Circle',                        w:1, h:1, color:'blue',   shape:'circle' },
+  { id:'PX-009', name:'Circle',                        w:2, h:2, color:'blue',   shape:'circle' },
+  { id:'PX-010', name:'Quarter Circle',                w:1, h:1, color:'blue',   shape:'qtr-circle' },
+  { id:'PX-011', name:'Half Circle',                   w:2, h:1, color:'blue',   shape:'half-circle' },
+  { id:'PX-012', name:'Quarter Circle',                w:2, h:2, color:'blue',   shape:'qtr-circle' },
+  { id:'PX-013', name:'Inverted Quarter Circle',       w:1, h:1, color:'blue',   shape:'inv-qtr' },
+  { id:'PX-014', name:'Inverted Quarter Circle',       w:2, h:1, color:'blue',   shape:'inv-qtr-double' },
+  { id:'PX-015', name:'Inverted Quarter Circle',       w:2, h:2, color:'blue',   shape:'inv-qtr' },
+  { id:'PX-016', name:'Solid Arc',                     w:2, h:2, color:'blue',   shape:'arc-solid' },
+  { id:'PX-017', name:'Solid Arc',                     w:3, h:3, color:'blue',   shape:'arc-solid' },
+  { id:'PX-018', name:'Straight Line',                 w:1, h:1, color:'green',  shape:'line-h' },
+  { id:'PX-019', name:'Straight Line',                 w:2, h:1, color:'green',  shape:'line-h' },
+  { id:'PX-020', name:'Straight Line',                 w:4, h:1, color:'green',  shape:'line-h' },
+  { id:'PX-021', name:'Diagonal Line',                 w:1, h:1, color:'green',  shape:'line-diag' },
+  { id:'PX-022', name:'Diagonal Line',                 w:2, h:1, color:'green',  shape:'line-chevron' },
+  { id:'PX-023', name:'Diagonal Line',                 w:2, h:2, color:'green',  shape:'line-diag' },
+  { id:'PX-024', name:'Lined Circle',                  w:1, h:1, color:'green',  shape:'circle-lined' },
+  { id:'PX-025', name:'Lined Circle',                  w:2, h:2, color:'green',  shape:'circle-lined' },
+  { id:'PX-026', name:'Arc Line',                      w:1, h:1, color:'green',  shape:'arc-line' },
+  { id:'PX-027', name:'Arc Line',                      w:2, h:1, color:'green',  shape:'arc-line-u' },
+  { id:'PX-028', name:'Arc Line',                      w:2, h:2, color:'green',  shape:'arc-line' },
+  { id:'PX-029', name:'Straight Line Corner',          w:1, h:1, color:'green',  shape:'line-corner' },
+  { id:'PX-030', name:'Half Round Square',             w:1, h:1, color:'orange', shape:'half-round' },
+  { id:'PX-031', name:'Isosceles Triangle',            w:1, h:1, color:'red',    shape:'tri-iso' },
+  { id:'PX-032', name:'Isosceles Triangle',            w:2, h:2, color:'red',    shape:'tri-iso' },
+  { id:'PX-033', name:'Solid Arc "U"',                 w:3, h:2, color:'blue',   shape:'arc-u' },
+  { id:'PX-034', name:'Solid Arc "Y"',                 w:3, h:2, color:'blue',   shape:'arc-y' },
+];
+const COLORS = { yellow:'#F5C842', red:'#E8392A', blue:'#2A6FE8', green:'#2EAA5A', orange:'#F07A28' };
+const COLS = 16, ROWS = 24, CELL = 24;
+const W = COLS * CELL, H = ROWS * CELL;
+
+// ─── GLOBAL STATE ────────────────────────────────────────────────────────────
+let plates = [];
+let activePlateIdx = 0;
+let plateCounter = 0;
+let overlayMode = false;
+
+let selectedPiece = null;
+let currentRotation = 0;
+let tool = 'place';
+let mirrorMode = false;
+let pieceColorMode = true;
+let colorFilter = 'all';
+let hoverCell = null;
+let isMouseDown = false;
+
+// Selection tool state
+let selection = [];          // array of placed piece objects currently selected
+let marqueeStart = null;     // {col, row} where marquee drag began (in grid coords)
+let marqueeEnd = null;       // {col, row} current marquee end
+let isMarqueeDrawing = false;
+let isDraggingSelection = false;
+let selDragStartCol = 0, selDragStartRow = 0;  // grid cell where drag began
+let selDragOffsetCol = 0, selDragOffsetRow = 0; // offset from drag start to selection origin
+
+const historyMap = {};
+const MAX_HISTORY = 50;
+
+// ─── ACCESSORS ───────────────────────────────────────────────────────────────
+const ap = () => plates[activePlateIdx];
+const getPlaced = () => ap().pieces;
+
+// ─── UNDO ────────────────────────────────────────────────────────────────────
+function saveHistory() {
+  const id = ap().id;
+  if (!historyMap[id]) historyMap[id] = [];
+  historyMap[id].push(JSON.parse(JSON.stringify(getPlaced())));
+  if (historyMap[id].length > MAX_HISTORY) historyMap[id].shift();
+}
+function undo() {
+  const id = ap().id;
+  if (!historyMap[id]?.length) return;
+  ap().pieces = historyMap[id].pop();
+  redrawActive(); drawHover(); updateUsage(); updatePieceCount();
+}
+
+// ─── TEXTURE ─────────────────────────────────────────────────────────────────
+// Pre-generate a noise texture canvas once at startup.
+// Bright pixels = paper showing through; dark pixels = solid ink.
+// We use destination-out to cut the noise shape OUT of the filled ink,
+// revealing the white plate beneath — like ink that didn't fully saturate.
+const TEXTURE_SIZE = 512;
+const textureCanvas = document.createElement('canvas');
+textureCanvas.width = TEXTURE_SIZE; textureCanvas.height = TEXTURE_SIZE;
+(function buildTexture() {
+  const tc = textureCanvas.getContext('2d');
+  const img = tc.createImageData(TEXTURE_SIZE, TEXTURE_SIZE);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    // Horizontal fiber bias — paper grain runs horizontally
+    const fiber = Math.random() < 0.035 ? Math.random() * 0.9 : 0;
+    // Fine random noise
+    const noise = Math.random() * 0.7;
+    // Occasional larger dropout (ink didn't take)
+    const dropout = Math.random() < 0.006 ? Math.random() * 1.0 : 0;
+    // Alpha = how much to erase (higher = more paper showing through)
+    const alpha = Math.min(1, noise + fiber + dropout);
+    d[i] = d[i+1] = d[i+2] = 255;
+    d[i+3] = Math.round(alpha * 255);
+  }
+  tc.putImageData(img, 0, 0);
+})();
+
+// Apply texture by drawing onto an isolated offscreen first, then source-atop
+// onto the main canvas. This prevents texture from affecting previously drawn pieces.
+// Build a textured version of an already-filled offscreen canvas.
+// Punches white holes into a copy using destination-out, then overlays it.
+function applyTexture(oc, w, h, offsetX, offsetY) {
+  const ox = Math.round(offsetX || 0) % TEXTURE_SIZE;
+  const oy = Math.round(offsetY || 0) % TEXTURE_SIZE;
+  oc.globalCompositeOperation = 'destination-out';
+  oc.globalAlpha = 0.62;
+  for (let ty = -oy; ty < h + TEXTURE_SIZE; ty += TEXTURE_SIZE) {
+    for (let tx = -ox; tx < w + TEXTURE_SIZE; tx += TEXTURE_SIZE) {
+      oc.drawImage(textureCanvas, tx, ty);
+    }
+  }
+  oc.globalCompositeOperation = 'source-over';
+  oc.globalAlpha = 1;
+}
+
+// ─── SHAPE DRAWING ────────────────────────────────────────────────────────────
+function drawShape(ctx, piece, x, y, cW, cH, rot, fill, isHover, isDrag) {
+  ctx.save();
+  ctx.translate(x + cW/2, y + cH/2);
+  // Only apply rotation for shapes that aren't handled by dims() swapping alone.
+  // rect is omitted since it's symmetric and dims() handles orientation.
+  const needsRot = piece.shape !== 'rect' && piece.shape !== 'tri-iso' && piece.shape !== 'half-circle' && piece.shape !== 'inv-qtr-double' && piece.shape !== 'line-h' && piece.shape !== 'arc-line-u' && piece.shape !== 'line-corner' && piece.shape !== 'arc-u' && piece.shape !== 'arc-y' && piece.shape !== 'line-chevron';
+  if (needsRot) ctx.rotate(rot * Math.PI/180);
+  ctx.translate(-cW/2, -cH/2);
+  const w = cW, h = cH, s = piece.shape;
+
+  ctx.fillStyle   = isHover ? fill+'70' : (isDrag ? fill+'50' : fill);
+  ctx.strokeStyle = (isHover || isDrag) ? fill : 'transparent';
+  ctx.lineWidth   = 1.5;
+  if (isDrag) ctx.setLineDash([3,3]);
+
+  const useTexture = !isHover && !isDrag;
+
+  // Stroke-only shapes — apply texture along the stroke using a line clip trick
+  if (s === 'line-chevron') {
+    const offDiag = document.createElement('canvas');
+    offDiag.width = Math.ceil(w); offDiag.height = Math.ceil(h);
+    const od = offDiag.getContext('2d');
+    od.fillStyle = isHover ? fill+'70' : (isDrag ? fill+'50' : fill);
+    const r = ((rot % 360) + 360) % 360;
+    const thickness = CELL * 0.28;
+
+    if (r === 0 || r === 180) {
+      // Wide: w=2 cells, h=1 cell — chevron points up (0) or down (180)
+      const longW = w, longH = h;
+      const halfLen = Math.sqrt((longW/2)*(longW/2) + longH*longH);
+      const angle = Math.atan2(longH, longW/2);
+      const midX = longW/2, midY = r === 0 ? 0 : longH;
+      // Left stroke
+      od.save(); od.translate(longW/4, longH/2); od.rotate(r === 0 ? -angle : angle);
+      od.beginPath(); od.rect(-halfLen/2, -thickness/2, halfLen, thickness);
+      od.restore(); od.fill();
+      // Right stroke
+      od.save(); od.translate(longW*3/4, longH/2); od.rotate(r === 0 ? angle : -angle);
+      od.beginPath(); od.rect(-halfLen/2, -thickness/2, halfLen, thickness);
+      od.restore(); od.fill();
+    } else {
+      // Tall: w=1 cell, h=2 cells — chevron points right (90) or left (270)
+      const halfLen = Math.sqrt(w*w + (h/2)*(h/2));
+      const angle = Math.atan2(w, h/2);
+      // Top stroke
+      od.save(); od.translate(w/2, h/4); od.rotate(r === 90 ? angle : -angle);
+      od.beginPath(); od.rect(-halfLen/2, -thickness/2, halfLen, thickness);
+      od.restore(); od.fill();
+      // Bottom stroke
+      od.save(); od.translate(w/2, h*3/4); od.rotate(r === 90 ? -angle : angle);
+      od.beginPath(); od.rect(-halfLen/2, -thickness/2, halfLen, thickness);
+      od.restore(); od.fill();
+    }
+    if (useTexture) applyTexture(od, w, h, x, y);
+    ctx.drawImage(offDiag, 0, 0);
+    ctx.restore(); return;
+  }
+  if (s === 'line-diag') {
+    const offDiag = document.createElement('canvas');
+    offDiag.width = Math.ceil(w); offDiag.height = Math.ceil(h);
+    const od = offDiag.getContext('2d');
+    od.fillStyle = isHover ? fill+'70' : (isDrag ? fill+'50' : fill);
+    const diagLen = Math.sqrt(w*w + h*h);
+    const thickness = CELL * 0.28;
+    od.save();
+    od.translate(w/2, h/2);
+    od.rotate(Math.atan2(h, w));
+    od.rect(-diagLen/2, -thickness/2, diagLen, thickness);
+    od.restore();
+    od.fill();
+    if (useTexture) applyTexture(od, w, h, x, y);
+    ctx.drawImage(offDiag, 0, 0);
+    ctx.restore(); return;
+  }
+  if (s === 'circle-lined') {
+    const lw = CELL * 0.28;
+    ctx.lineWidth = lw; ctx.strokeStyle = fill;
+    ctx.beginPath(); ctx.arc(w/2, h/2, Math.min(w,h)/2 - lw/2, 0, Math.PI*2);
+    ctx.stroke();
+    ctx.restore(); return;
+  }
+  if (s === 'arc-line-u') {
+    const r = ((rot%360)+360)%360;
+    ctx.lineWidth = CELL * 0.28; ctx.strokeStyle = fill;
+    ctx.beginPath();
+    if (r===0)        { ctx.arc(w/2, 0, w/2, 0, Math.PI); }
+    else if (r===90)  { ctx.arc(w, h/2, h/2, Math.PI/2, Math.PI*1.5); }
+    else if (r===180) { ctx.arc(w/2, h, w/2, Math.PI, 0); }
+    else              { ctx.arc(0, h/2, h/2, -Math.PI/2, Math.PI/2); }
+    ctx.stroke();
+    ctx.restore(); return;
+  }
+  if (s === 'arc-line') {
+    ctx.lineWidth = CELL * 0.28; ctx.strokeStyle = fill;
+    ctx.beginPath(); ctx.arc(0, h, Math.max(w,h), -Math.PI/2, 0);
+    ctx.stroke();
+    ctx.restore(); return;
+  }
+
+  // All filled shapes: draw on offscreen, apply texture, blit to main canvas.
+  // This ensures texture never bleeds onto other pieces via shared canvas state.
+  const off = document.createElement('canvas');
+  off.width = Math.ceil(w); off.height = Math.ceil(h);
+  const oc = off.getContext('2d');
+  oc.fillStyle = isHover ? fill+'70' : (isDrag ? fill+'50' : fill);
+  oc.strokeStyle = 'transparent';
+  oc.lineWidth = 1.5;
+
+  oc.beginPath();
+  if      (s==='rect')        { oc.rect(0,0,w,h); }
+  else if (s==='tri-tl')      { oc.moveTo(0,0); oc.lineTo(w,0); oc.lineTo(0,h); }
+  else if (s==='tri-iso') {
+    const r = ((rot % 360) + 360) % 360;
+    if (r === 0)   { oc.moveTo(w/2,0); oc.lineTo(w,h); oc.lineTo(0,h); }        // apex up
+    else if (r===90)  { oc.moveTo(w,h/2); oc.lineTo(0,h); oc.lineTo(0,0); }     // apex right
+    else if (r===180) { oc.moveTo(w/2,h); oc.lineTo(0,0); oc.lineTo(w,0); }     // apex down
+    else              { oc.moveTo(0,h/2); oc.lineTo(w,0); oc.lineTo(w,h); }      // apex left
+  }
+  else if (s==='circle')      { oc.ellipse(w/2,h/2,w/2,h/2,0,0,Math.PI*2); }
+  else if (s==='qtr-circle')  { oc.moveTo(0,0); oc.arc(0,0,Math.max(w,h),0,Math.PI/2); }
+  else if (s==='half-circle') {
+    const r = ((rot%360)+360)%360;
+    const rH = Math.min(w/2, h); // clamp radius so arc never exceeds bounding box
+    const rV = Math.min(h/2, w); // clamped radius for 90/270 rotations
+    if (r===0)        { oc.moveTo(0,h); oc.lineTo(w,h); oc.arc(w/2,h,rH,0,Math.PI,true); oc.closePath(); }
+    else if (r===90)  { oc.moveTo(0,0); oc.lineTo(0,h); oc.arc(0,h/2,rV,Math.PI*1.5,Math.PI*0.5,false); oc.closePath(); }
+    else if (r===180) { oc.moveTo(0,0); oc.lineTo(w,0); oc.arc(w/2,0,rH,0,Math.PI,false); oc.closePath(); }
+    else              { oc.moveTo(w,0); oc.lineTo(w,h); oc.arc(w,h/2,rV,Math.PI*1.5,Math.PI*0.5,true); oc.closePath(); }
+  }
+  else if (s==='inv-qtr') {
+    oc.rect(0,0,w,h); oc.fill();
+    oc.globalCompositeOperation = 'destination-out';
+    oc.beginPath(); oc.moveTo(0,0); oc.arc(0,0,Math.min(w,h),0,Math.PI/2); oc.closePath(); oc.fill();
+    oc.globalCompositeOperation = 'source-over';
+    if (useTexture) applyTexture(oc, w, h, x, y);
+    ctx.drawImage(off, 0, 0); ctx.restore(); return;
+  }
+  else if (s==='arc-solid') {
+    const outerR = Math.min(w,h);
+    const innerR = Math.max(0, outerR - Math.min(CELL, outerR * 0.5));
+    oc.moveTo(0,0); oc.arc(0,0,outerR,0,Math.PI/2); oc.closePath(); oc.fill();
+    oc.globalCompositeOperation = 'destination-out';
+    oc.beginPath(); oc.moveTo(0,0); oc.arc(0,0,innerR,0,Math.PI/2); oc.closePath(); oc.fill();
+    oc.globalCompositeOperation = 'source-over';
+    if (useTexture) applyTexture(oc, w, h, x, y);
+    ctx.drawImage(off, 0, 0); ctx.restore(); return;
+  }
+  else if (s==='arc-u') {
+    const r = ((rot%360)+360)%360;
+    // At 0/180: w=3cells, h=2cells. At 90/270: w=2cells, h=3cells (swapped by dims())
+    const isHoriz = (r === 0 || r === 180);
+    const cw = isHoriz ? w / 3 : w / 2; // 1 cell in pixel width
+    const ch = isHoriz ? h / 2 : h / 3; // 1 cell in pixel height
+
+    if (r === 0) {
+      const outerR = w / 2, innerR = Math.max(0, outerR - cw);
+      oc.beginPath(); oc.arc(w/2, outerR, outerR, Math.PI, 0); oc.arc(w/2, outerR, innerR, 0, Math.PI, true); oc.closePath(); oc.fill();
+      oc.beginPath(); oc.rect(0, outerR, cw, h - outerR); oc.fill();
+      oc.beginPath(); oc.rect(w - cw, outerR, cw, h - outerR); oc.fill();
+    } else if (r === 180) {
+      const outerR = w / 2, innerR = Math.max(0, outerR - cw);
+      oc.beginPath(); oc.arc(w/2, h - outerR, outerR, 0, Math.PI); oc.arc(w/2, h - outerR, innerR, Math.PI, 0, true); oc.closePath(); oc.fill();
+      oc.beginPath(); oc.rect(0, 0, cw, h - outerR); oc.fill();
+      oc.beginPath(); oc.rect(w - cw, 0, cw, h - outerR); oc.fill();
+    } else if (r === 90) {
+      const outerR = h / 2, innerR = Math.max(0, outerR - ch);
+      oc.beginPath(); oc.arc(w - outerR, h/2, outerR, -Math.PI/2, Math.PI/2); oc.arc(w - outerR, h/2, innerR, Math.PI/2, -Math.PI/2, true); oc.closePath(); oc.fill();
+      oc.beginPath(); oc.rect(0, 0, w - outerR, ch); oc.fill();
+      oc.beginPath(); oc.rect(0, h - ch, w - outerR, ch); oc.fill();
+    } else {
+      // 270°: mirror of 90° horizontally
+      const outerR = h / 2, innerR = Math.max(0, outerR - ch);
+      oc.save();
+      oc.translate(w, 0); oc.scale(-1, 1);
+      oc.beginPath(); oc.arc(w - outerR, h/2, outerR, -Math.PI/2, Math.PI/2); oc.arc(w - outerR, h/2, innerR, Math.PI/2, -Math.PI/2, true); oc.closePath(); oc.fill();
+      oc.beginPath(); oc.rect(0, 0, w - outerR, ch); oc.fill();
+      oc.beginPath(); oc.rect(0, h - ch, w - outerR, ch); oc.fill();
+      oc.restore();
+    }
+    if (useTexture) applyTexture(oc, w, h, x, y);
+    ctx.drawImage(off, 0, 0); ctx.restore(); return;
+  }
+  else if (s==='inv-qtr-double') {
+    const r = ((rot%360)+360)%360;
+    oc.rect(0,0,w,h); oc.fill();
+    oc.globalCompositeOperation = 'destination-out';
+    oc.beginPath();
+    if (r===0)        { oc.arc(w/2, 0, w/2, 0, Math.PI*2); }   // cutout top
+    else if (r===90)  { oc.arc(w, h/2, h/2, 0, Math.PI*2); }   // cutout right
+    else if (r===180) { oc.arc(w/2, h, w/2, 0, Math.PI*2); }   // cutout bottom
+    else              { oc.arc(0, h/2, h/2, 0, Math.PI*2); }    // cutout left
+    oc.fill();
+    oc.globalCompositeOperation = 'source-over';
+    if (useTexture) applyTexture(oc, w, h, x, y);
+    ctx.drawImage(off, 0, 0); ctx.restore(); return;
+  }
+  else if (s==='arc-y') {
+    const r = ((rot%360)+360)%360;
+    const isHoriz = (r === 0 || r === 180);
+    const cw = isHoriz ? w / 3 : w / 2;
+    const ch = isHoriz ? h / 2 : h / 3;
+
+    if (r === 0 || r === 180) {
+      const outerR = Math.min(w,h), innerR = Math.max(0, outerR - cw);
+      if (r === 0) {
+        // 0°+270°: top-left + top-right
+        oc.beginPath(); oc.arc(0, 0, outerR, 0, Math.PI/2); oc.arc(0, 0, innerR, Math.PI/2, 0, true); oc.closePath(); oc.fill();
+        oc.beginPath(); oc.arc(w, 0, outerR, Math.PI/2, Math.PI); oc.arc(w, 0, innerR, Math.PI, Math.PI/2, true); oc.closePath(); oc.fill();
+      } else {
+        // 180°+90°: bottom-right + bottom-left
+        oc.beginPath(); oc.arc(w, h, outerR, Math.PI, Math.PI*1.5); oc.arc(w, h, innerR, Math.PI*1.5, Math.PI, true); oc.closePath(); oc.fill();
+        oc.beginPath(); oc.arc(0, h, outerR, Math.PI*1.5, Math.PI*2); oc.arc(0, h, innerR, Math.PI*2, Math.PI*1.5, true); oc.closePath(); oc.fill();
+      }
+    } else if (r === 90) {
+      const outerR = Math.min(w,h), innerR = Math.max(0, outerR - ch);
+      // 90°+0°: bottom-left + top-left
+      oc.beginPath(); oc.arc(0, h, outerR, Math.PI*1.5, Math.PI*2); oc.arc(0, h, innerR, Math.PI*2, Math.PI*1.5, true); oc.closePath(); oc.fill();
+      oc.beginPath(); oc.arc(0, 0, outerR, 0, Math.PI/2); oc.arc(0, 0, innerR, Math.PI/2, 0, true); oc.closePath(); oc.fill();
+    } else {
+      const outerR = Math.min(w,h), innerR = Math.max(0, outerR - ch);
+      // 270°+180°: top-right + bottom-right
+      oc.beginPath(); oc.arc(w, 0, outerR, Math.PI/2, Math.PI); oc.arc(w, 0, innerR, Math.PI, Math.PI/2, true); oc.closePath(); oc.fill();
+      oc.beginPath(); oc.arc(w, h, outerR, Math.PI, Math.PI*1.5); oc.arc(w, h, innerR, Math.PI*1.5, Math.PI, true); oc.closePath(); oc.fill();
+    }
+    if (useTexture) applyTexture(oc, w, h, x, y);
+    ctx.drawImage(off, 0, 0); ctx.restore(); return;
+  }
+  else if (s==='line-h') {
+    const lw = Math.max(2, Math.min(w,h)*0.18);
+    const r = ((rot%360)+360)%360;
+    if (r===0)        { oc.rect(0, 0, w, lw); }          // top
+    else if (r===90)  { oc.rect(w-lw, 0, lw, h); }       // right
+    else if (r===180) { oc.rect(0, h-lw, w, lw); }       // bottom
+    else              { oc.rect(0, 0, lw, h); }           // left
+  }
+  else if (s==='line-corner') {
+    const lw = CELL * 0.28;
+    const r = ((rot%360)+360)%360;
+    if (r===0) {
+      // Corner at bottom-left
+      oc.rect(0, 0, lw, h);
+      oc.rect(0, h-lw, w, lw);
+    } else if (r===90) {
+      // Corner at top-left
+      oc.rect(0, 0, lw, h);
+      oc.rect(0, 0, w, lw);
+    } else if (r===180) {
+      // Corner at top-right
+      oc.rect(w-lw, 0, lw, h);
+      oc.rect(0, 0, w, lw);
+    } else {
+      // Corner at bottom-right
+      oc.rect(w-lw, 0, lw, h);
+      oc.rect(0, h-lw, w, lw);
+    }
+  }
+  else if (s==='half-round')  { oc.rect(0,h/2,w,h/2); oc.arc(w/2,h/2,w/2,Math.PI,0); }
+  oc.fill();
+  if (useTexture) applyTexture(oc, w, h, x, y);
+  ctx.drawImage(off, 0, 0);
+  ctx.restore();
+}
+
+// ─── CANVAS HELPERS ──────────────────────────────────────────────────────────
+function makeCanvas() {
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  c.style.cssText = `position:absolute;top:0;left:0;width:${W}px;height:${H}px;pointer-events:none;`;
+  return c;
+}
+function drawGridOn(ctx) {
+  ctx.clearRect(0,0,W,H);
+  ctx.strokeStyle = 'rgba(0,0,0,0.1)'; ctx.lineWidth = 0.5;
+  for (let c=0;c<=COLS;c++){ctx.beginPath();ctx.moveTo(c*CELL,0);ctx.lineTo(c*CELL,H);ctx.stroke();}
+  for (let r=0;r<=ROWS;r++){ctx.beginPath();ctx.moveTo(0,r*CELL);ctx.lineTo(W,r*CELL);ctx.stroke();}
+}
+
+// ─── PLATE MANAGEMENT ────────────────────────────────────────────────────────
+const INK_COLORS = [
+  { hex:'#1A1A1A', name:'Black' },
+  { hex:'#E8392A', name:'Red' },
+  { hex:'#2A6FE8', name:'Blue' },
+  { hex:'#2EAA5A', name:'Green' },
+  { hex:'#8B3DBF', name:'Purple' },
+];
+
+function createPlate(label, ink) {
+  const id = ++plateCounter;
+
+  const container = document.createElement('div');
+  container.className = 'plate-container';
+
+  const header = document.createElement('div');
+  header.className = 'plate-header';
+
+  const nameEl = document.createElement('div');
+  nameEl.className = 'plate-name';
+  nameEl.textContent = label;
+
+  // Small colored dot showing the plate's current ink
+  const inkDot = document.createElement('div');
+  inkDot.className = 'plate-ink-dot';
+  inkDot.style.background = '#1A1A1A';
+
+  const removeBtn = document.createElement('button');
+  removeBtn.className = 'plate-remove';
+  removeBtn.textContent = '✕';
+  removeBtn.title = 'Remove plate';
+  removeBtn.style.display = 'none';
+  removeBtn.onclick = (e) => { e.stopPropagation(); removePlate(id); };
+
+  header.appendChild(nameEl);
+  header.appendChild(inkDot);
+  header.appendChild(removeBtn);
+
+  const plateDom = document.createElement('div');
+  plateDom.className = 'plate';
+  plateDom.style.width = W+'px';
+  plateDom.style.height = H+'px';
+  plateDom.addEventListener('mousedown', () => {
+    const idx = plates.findIndex(p => p.id === id);
+    if (idx !== activePlateIdx) setActivePlate(idx);
+  });
+
+  const gridC = makeCanvas();
+  const inkGridC = makeCanvas();
+  inkGridC.style.zIndex = 1;
+  const piecesC = makeCanvas();
+  const hoverC = makeCanvas();
+  hoverC.style.zIndex = 2;
+  plateDom.appendChild(gridC);
+  plateDom.appendChild(piecesC);
+  plateDom.appendChild(inkGridC);
+  plateDom.appendChild(hoverC);
+
+  container.appendChild(header);
+  container.appendChild(plateDom);
+
+  const gCtx = gridC.getContext('2d');
+  const pCtx = piecesC.getContext('2d');
+  const igCtx = inkGridC.getContext('2d');
+  const hCtx = hoverC.getContext('2d');
+  drawGridOn(gCtx);
+
+  const obj = { id, label, ink: ink || '#1A1A1A', pieces:[], dom:{ container, plateDom, nameEl, inkDot, removeBtn, gridC, piecesC, inkGridC, igCtx, hoverC, gCtx, pCtx, hCtx } };
+  inkDot.style.background = obj.ink;
+  plates.push(obj);
+  bindPlateEvents(hoverC, obj);
+
+  document.getElementById('platesRow').appendChild(container);
+  refreshRemoveButtons();
+  // Enable pointer events immediately — setActivePlate will manage this for multi-plate
+  hoverC.style.pointerEvents = 'auto';
+  return obj;
+}
+
+// ─── SHARED INK PALETTE ───────────────────────────────────────────────────────
+const DEFAULT_INKS = ['#1A1A1A', '#E8392A', '#2A6FE8', '#2EAA5A'];
+let inkPalette = []; // custom inks only
+let selectedSwatchHex = null;
+
+function renderPaletteSwatches() {
+  const container = document.getElementById('ipwSwatches');
+  container.innerHTML = '';
+
+  function makeSwatch(hex, isDeletable) {
+    const wrap = document.createElement('div');
+    wrap.className = 'palette-swatch-wrap';
+    const s = document.createElement('div');
+    s.className = 'palette-swatch';
+    s.style.background = hex;
+    s.title = hex.toUpperCase();
+    if (!pieceColorMode && plates[activePlateIdx]?.ink === hex) s.classList.add('active');
+    if (selectedSwatchHex === hex) s.classList.add('selected');
+    s.onclick = () => {
+      selectedSwatchHex = hex;
+      applyPaletteColor(hex);
+      document.getElementById('ipwPicker').style.display = 'none';
+    };
+    wrap.appendChild(s);
+    return wrap;
+  }
+
+  // ── Default row ──
+  const defaultLabel = document.createElement('div');
+  defaultLabel.className = 'ipw-row-label';
+  defaultLabel.textContent = 'Default';
+  container.appendChild(defaultLabel);
+
+  const defaultRow = document.createElement('div');
+  defaultRow.className = 'ipw-swatch-row';
+  DEFAULT_INKS.forEach(hex => defaultRow.appendChild(makeSwatch(hex, false)));
+  container.appendChild(defaultRow);
+
+  // ── Divider ──
+  const divider = document.createElement('div');
+  divider.className = 'ipw-divider';
+  container.appendChild(divider);
+
+  // ── Custom row ──
+  const customLabel = document.createElement('div');
+  customLabel.className = 'ipw-row-label';
+  customLabel.textContent = 'Custom';
+  container.appendChild(customLabel);
+
+  const customRow = document.createElement('div');
+  customRow.className = 'ipw-swatch-row';
+  inkPalette.forEach(hex => customRow.appendChild(makeSwatch(hex, true)));
+
+  // + button always trails after custom swatches
+  const addBtn = document.createElement('button');
+  addBtn.className = 'palette-swatch-add';
+  addBtn.title = 'Add custom color';
+  addBtn.textContent = '+';
+  addBtn.onclick = () => {
+    document.getElementById('ipwPicker').style.display = '';
+    drawColorWheel(); updateCpPreview();
+  };
+  customRow.appendChild(addBtn);
+  container.appendChild(customRow);
+
+  updateTray();
+}
+
+function updateTray() {
+  const usedHexes = new Set(plates.map(p => p.ink));
+  const delBtn = document.getElementById('trayDeleteSelected');
+  const unusedBtn = document.getElementById('trayDeleteUnused');
+  const label = document.getElementById('trayLabel');
+  if (!delBtn) return;
+  const isDefault = selectedSwatchHex && DEFAULT_INKS.includes(selectedSwatchHex);
+  delBtn.disabled = !selectedSwatchHex || isDefault;
+  unusedBtn.disabled = !inkPalette.some(h => !usedHexes.has(h)); // only custom can be deleted
+  label.textContent = selectedSwatchHex ? selectedSwatchHex.toUpperCase() : '—';
+}
+
+function deleteSelectedSwatch() {
+  if (!selectedSwatchHex || DEFAULT_INKS.includes(selectedSwatchHex)) return;
+  inkPalette = inkPalette.filter(h => h !== selectedSwatchHex);
+  selectedSwatchHex = null;
+  renderPaletteSwatches();
+}
+
+function deleteUnusedSwatches() {
+  const usedHexes = new Set(plates.map(p => p.ink));
+  inkPalette = inkPalette.filter(h => usedHexes.has(h)); // default inks are separate, unaffected
+  if (selectedSwatchHex && !inkPalette.includes(selectedSwatchHex) && !DEFAULT_INKS.includes(selectedSwatchHex)) selectedSwatchHex = null;
+  renderPaletteSwatches();
+}
+
+function applyPaletteColor(hex) {
+  if (pieceColorMode) return;
+  const p = ap();
+  p.ink = hex;
+  p.pieces.forEach(pp => { pp.ink = hex; });
+  p.dom.inkDot.style.background = hex;
+  selectedSwatchHex = hex;
+  renderPaletteSwatches();
+  redrawActive(); drawHover();
+  if (overlayMode) renderOverlay();
+}
+
+function deletePaletteSwatch(hex) {
+  if (DEFAULT_INKS.includes(hex)) return;
+  inkPalette = inkPalette.filter(h => h !== hex);
+  if (selectedSwatchHex === hex) selectedSwatchHex = null;
+  renderPaletteSwatches();
+}
+
+function confirmColor() {
+  const hex = cpCurrentHex;
+  if (!DEFAULT_INKS.includes(hex) && !inkPalette.includes(hex)) inkPalette.push(hex);
+  selectedSwatchHex = hex;
+  renderPaletteSwatches();
+  applyPaletteColor(hex);
+  document.getElementById('ipwPicker').style.display = 'none';
+}
+
+// ─── COLOR WHEEL ──────────────────────────────────────────────────────────────
+let cpCurrentHex = '#1A1A1A';
+let cpCurrentHue = 0;
+let cpCurrentSat = 0;
+let cpLightness = 50;
+
+function drawColorWheel() {
+  const canvas = document.getElementById('cpWheel');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const size = canvas.width;
+  const cx = size/2, cy = size/2, r = size/2 - 2;
+  ctx.clearRect(0, 0, size, size);
+  for (let angle = 0; angle < 360; angle++) {
+    const a0 = (angle - 1) * Math.PI/180;
+    const a1 = (angle + 1) * Math.PI/180;
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+    grad.addColorStop(0, `hsl(${angle},0%,${cpLightness}%)`);
+    grad.addColorStop(1, `hsl(${angle},100%,${cpLightness}%)`);
+    ctx.beginPath(); ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, a0, a1); ctx.closePath();
+    ctx.fillStyle = grad; ctx.fill();
+  }
+  // Crosshair
+  const px = cx + Math.cos(cpCurrentHue * Math.PI/180) * cpCurrentSat * r;
+  const py = cy + Math.sin(cpCurrentHue * Math.PI/180) * cpCurrentSat * r;
+  ctx.beginPath(); ctx.arc(px, py, 7, 0, Math.PI*2);
+  ctx.strokeStyle = 'white'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.beginPath(); ctx.arc(px, py, 7, 0, Math.PI*2);
+  ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 1; ctx.stroke();
+}
+
+function hslToHex(h, s, l) {
+  s /= 100; l /= 100;
+  const a = s * Math.min(l, 1-l);
+  const f = n => { const k=(n+h/30)%12; const c=l-a*Math.max(-1,Math.min(k-3,9-k,1)); return Math.round(255*c).toString(16).padStart(2,'0'); };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+function updateCpPreview() {
+  cpCurrentHex = hslToHex(cpCurrentHue, cpCurrentSat*100, cpLightness);
+  document.getElementById('cpPreview').style.background = cpCurrentHex;
+  document.getElementById('cpHex').value = cpCurrentHex.toUpperCase();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const wheel = document.getElementById('cpWheel');
+  if (!wheel) return;
+  wheel.addEventListener('mousedown', function(e) {
+    const pick = (ev) => {
+      const rect = this.getBoundingClientRect();
+      const cx = rect.width/2, cy = rect.height/2;
+      const dx = ev.clientX - rect.left - cx, dy = ev.clientY - rect.top - cy;
+      const r = rect.width/2 - 2;
+      cpCurrentHue = ((Math.atan2(dy, dx) * 180/Math.PI) + 360) % 360;
+      cpCurrentSat = Math.min(Math.sqrt(dx*dx+dy*dy) / r, 1);
+      drawColorWheel(); updateCpPreview();
+    };
+    pick(e);
+    const onMove = ev => pick(ev);
+    const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+
+  document.getElementById('cpLightness').addEventListener('input', function() {
+    cpLightness = parseInt(this.value);
+    drawColorWheel(); updateCpPreview();
+  });
+
+  document.getElementById('cpHex').addEventListener('change', function() {
+    const v = this.value.trim().toUpperCase();
+    if (!/^#[0-9A-F]{6}$/.test(v)) return;
+    cpCurrentHex = v.toLowerCase();
+    document.getElementById('cpPreview').style.background = cpCurrentHex;
+    this.value = v;
+    // Parse hex → RGB → HSL so the wheel crosshair reflects the typed color
+    const r = parseInt(v.slice(1,3),16)/255;
+    const g = parseInt(v.slice(3,5),16)/255;
+    const b = parseInt(v.slice(5,7),16)/255;
+    const max = Math.max(r,g,b), min = Math.min(r,g,b), d = max - min;
+    let h = 0, s = 0;
+    const l = (max + min) / 2;
+    if (d > 0) {
+      s = d / (1 - Math.abs(2*l - 1));
+      if (max === r) h = ((g - b) / d + 6) % 6;
+      else if (max === g) h = (b - r) / d + 2;
+      else h = (r - g) / d + 4;
+      h *= 60;
+    }
+    cpCurrentHue = h;
+    cpCurrentSat = s;
+    cpLightness = Math.round(l * 100);
+    document.getElementById('cpLightness').value = cpLightness;
+    drawColorWheel();
+  });
+});
+
+function removePlate(id) {
+  if (plates.length <= 1) return;
+  const idx = plates.findIndex(p => p.id === id);
+  if (idx < 0) return;
+  plates[idx].dom.container.remove();
+  plates.splice(idx, 1);
+  delete historyMap[id];
+  if (activePlateIdx >= plates.length) activePlateIdx = plates.length - 1;
+  refreshRemoveButtons();
+  setActivePlate(activePlateIdx);
+  syncOverlayBtn();
+  if (overlayMode) renderOverlay();
+}
+
+function addPlate() {
+  const label = `Plate ${plates.length + 1}`;
+  createPlate(label);
+  setActivePlate(plates.length - 1);
+  syncOverlayBtn();
+}
+
+function setActivePlate(idx) {
+  activePlateIdx = idx;
+  plates.forEach((p, i) => {
+    const active = i === idx;
+    p.dom.nameEl.style.opacity = active ? '1' : '0.45';
+    p.dom.plateDom.classList.toggle('is-inactive', !active);
+    p.dom.hoverC.style.pointerEvents = active ? 'auto' : 'none';
+    p.dom.inkDot.classList.toggle('visible', !pieceColorMode);
+  });
+  if (!pieceColorMode) renderPaletteSwatches();
+  updateUsage(); updatePieceCount();
+}
+
+function refreshRemoveButtons() {
+  plates.forEach(p => { p.dom.removeBtn.style.display = plates.length > 1 ? '' : 'none'; });
+}
+
+function syncOverlayBtn() {
+  const btn = document.getElementById('overlayBtn');
+  btn.style.display = plates.length >= 2 ? '' : 'none';
+  if (plates.length < 2 && overlayMode) {
+    overlayMode = false;
+    btn.textContent = 'Overlay: OFF';
+    btn.classList.remove('active');
+    document.getElementById('overlayWindow').classList.remove('visible');
+  }
+}
+
+// ─── OVERLAY MODE ────────────────────────────────────────────────────────────
+function toggleOverlay() {
+  overlayMode = !overlayMode;
+  const btn = document.getElementById('overlayBtn');
+  btn.textContent = overlayMode ? 'Overlay: ON' : 'Overlay: OFF';
+  btn.classList.toggle('active', overlayMode);
+  const win = document.getElementById('overlayWindow');
+  win.classList.toggle('visible', overlayMode);
+  if (overlayMode) { positionOverlay(); renderOverlay(); }
+}
+
+function renderOverlay() {
+  const canvas = document.getElementById('overlayCanvas');
+  canvas.width = W; canvas.height = H;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  canvas.style.display = 'block';
+
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+
+  // White background
+  ctx.fillStyle = 'white';
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(0,0,0,0.1)'; ctx.lineWidth = 0.5;
+  for (let c = 0; c <= COLS; c++) { ctx.beginPath(); ctx.moveTo(c*CELL, 0); ctx.lineTo(c*CELL, H); ctx.stroke(); }
+  for (let r = 0; r <= ROWS; r++) { ctx.beginPath(); ctx.moveTo(0, r*CELL); ctx.lineTo(W, r*CELL); ctx.stroke(); }
+
+  if (!pieceColorMode) {
+    // ── INK MODE: Riso-style simulation ──────────────────────────────────────
+    // Each plate is rendered onto its own offscreen canvas at full opacity,
+    // then composited onto the overlay with 'multiply' blending at ~75% alpha.
+    // multiply(A, B) = A*B, which is exactly what overlapping transparent inks do.
+    // The result: blue+yellow→green, red+blue→purple, etc.
+    plates.forEach(p => {
+      const offscreen = document.createElement('canvas');
+      offscreen.width = W; offscreen.height = H;
+      const oc = offscreen.getContext('2d');
+      // Draw this plate's pieces onto the offscreen at full opacity
+      p.pieces.forEach(pp => {
+        const { w, h } = dims(pp.piece, pp.rotation);
+        const inset = 1;
+        drawShape(oc, pp.piece, pp.col*CELL + inset, pp.row*CELL + inset, w*CELL - inset*2, h*CELL - inset*2, pp.rotation, p.ink, false, false);
+      });
+      // Composite onto main canvas with multiply (simulates transparent ink layering)
+      ctx.save();
+      ctx.globalAlpha = 0.95;
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.drawImage(offscreen, 0, 0);
+      ctx.restore();
+    });
+  } else {
+    // ── NATIVE MODE: simple stacked opacity ──────────────────────────────────
+    plates.forEach((p, i) => {
+      ctx.globalAlpha = 0.9;
+      p.pieces.forEach(pp => {
+        const { w, h } = dims(pp.piece, pp.rotation);
+        const fill = COLORS[pp.piece.color];
+        drawShape(ctx, pp.piece, pp.col*CELL, pp.row*CELL, w*CELL, h*CELL, pp.rotation, fill, false, false);
+      });
+    });
+    ctx.globalAlpha = 1;
+  }
+}
+
+function removeOverlay() {
+  // Nothing to remove from DOM; just hide the window
+  document.getElementById('overlayWindow').classList.remove('visible');
+}
+
+// ─── DRAW HELPERS ────────────────────────────────────────────────────────────
+function dims(piece, rotation) {
+  const r = ((rotation%360)+360)%360;
+  return (r===90||r===270) ? {w:piece.h,h:piece.w} : {w:piece.w,h:piece.h};
+}
+
+function drawInkGrid(p) {
+  const { igCtx } = p.dom;
+  igCtx.clearRect(0, 0, W, H);
+  // No longer used — gap is handled by piece inset in redrawPlate
+}
+
+function redrawPlate(p) {
+  const { pCtx } = p.dom;
+  pCtx.clearRect(0,0,W,H);
+  const inset = 1;
+  p.pieces.forEach(pp => {
+    const { w, h } = dims(pp.piece, pp.rotation);
+    let x = pp.col*CELL, y = pp.row*CELL, pw = w*CELL, ph = h*CELL;
+    const fill = pieceColorMode ? COLORS[pp.piece.color] : p.ink;
+    const isSelected = selection.includes(pp);
+    if (mirrorMode) {
+      pCtx.save();
+      pCtx.translate(W, 0);
+      pCtx.scale(-1, 1);
+    }
+    if (pieceColorMode) {
+      pCtx.save();
+      pCtx.globalAlpha = 0.12;
+      pCtx.fillStyle = fill;
+      pCtx.fillRect(x, y, pw, ph);
+      pCtx.restore();
+    }
+    drawShape(pCtx, pp.piece, x + inset, y + inset, pw - inset*2, ph - inset*2, pp.rotation, fill, false, false);
+    // Selection highlight overlay
+    if (isSelected) {
+      pCtx.save();
+      pCtx.globalAlpha = 0.25;
+      pCtx.fillStyle = '#2A6FE8';
+      pCtx.fillRect(x, y, pw, ph);
+      pCtx.restore();
+      pCtx.save();
+      pCtx.strokeStyle = '#2A6FE8';
+      pCtx.lineWidth = 2;
+      pCtx.strokeRect(x + 1, y + 1, pw - 2, ph - 2);
+      pCtx.restore();
+    }
+    if (mirrorMode) pCtx.restore();
+  });
+  drawInkGrid(p);
+}
+function redrawActive() { if (plates.length) { redrawPlate(ap()); if (overlayMode) renderOverlay(); } }
+
+function drawHover() {
+  const { hCtx } = ap().dom;
+  hCtx.clearRect(0,0,W,H);
+
+  // Draw marquee selection rectangle
+  if (tool === 'select' && isMarqueeDrawing && marqueeStart && marqueeEnd) {
+    const c1 = Math.min(marqueeStart.col, marqueeEnd.col);
+    const r1 = Math.min(marqueeStart.row, marqueeEnd.row);
+    const c2 = Math.max(marqueeStart.col, marqueeEnd.col) + 1;
+    const r2 = Math.max(marqueeStart.row, marqueeEnd.row) + 1;
+    hCtx.save();
+    hCtx.strokeStyle = '#2A6FE8';
+    hCtx.lineWidth = 1.5;
+    hCtx.setLineDash([4, 3]);
+    hCtx.strokeRect(c1*CELL, r1*CELL, (c2-c1)*CELL, (r2-r1)*CELL);
+    hCtx.globalAlpha = 0.08;
+    hCtx.fillStyle = '#2A6FE8';
+    hCtx.fillRect(c1*CELL, r1*CELL, (c2-c1)*CELL, (r2-r1)*CELL);
+    hCtx.restore();
+    return;
+  }
+
+  if (!hoverCell || !selectedPiece || tool !== 'place') return;
+  const { w, h } = dims(selectedPiece, currentRotation);
+  const { col, row } = hoverCell;
+  const ok = canPlace(selectedPiece, col, row, currentRotation);
+  const fill = pieceColorMode ? COLORS[selectedPiece.color] : ap().ink;
+  drawShape(hCtx, selectedPiece, col*CELL, row*CELL, w*CELL, h*CELL, currentRotation, ok ? fill : '#aaa', true, false);
+}
+
+// ─── SELECTION HELPERS ────────────────────────────────────────────────────────
+function clearSelection() {
+  selection = [];
+  if (plates.length) redrawActive();
+}
+
+function selectInMarquee(c1, r1, c2, r2) {
+  // Select all pieces that overlap the marquee rectangle
+  selection = getPlaced().filter(pp => {
+    const { w, h } = dims(pp.piece, pp.rotation);
+    return pp.col < c2 && pp.col + w > c1 && pp.row < r2 && pp.row + h > r1;
+  });
+  redrawActive();
+}
+
+function canMoveSelection(dCol, dRow) {
+  return selection.every(pp => {
+    const { w, h } = dims(pp.piece, pp.rotation);
+    const nc = pp.col + dCol, nr = pp.row + dRow;
+    if (nc < 0 || nr < 0 || nc + w > COLS || nr + h > ROWS) return false;
+    // Check collision with non-selected pieces
+    return !getPlaced().some(other => {
+      if (selection.includes(other)) return false;
+      const { w: ow, h: oh } = dims(other.piece, other.rotation);
+      return nc < other.col+ow && nc+w > other.col && nr < other.row+oh && nr+h > other.row;
+    });
+  });
+}
+
+function moveSelection(dCol, dRow) {
+  if (!canMoveSelection(dCol, dRow)) return;
+  saveHistory();
+  selection.forEach(pp => { pp.col += dCol; pp.row += dRow; });
+  redrawActive();
+}
+
+
+function isOccupied(col, row, excl) {
+  return getPlaced().some(pp => {
+    if (pp === excl) return false;
+    const { w, h } = dims(pp.piece, pp.rotation);
+    return col >= pp.col && col < pp.col+w && row >= pp.row && row < pp.row+h;
+  });
+}
+function canPlace(piece, col, row, rotation, excl) {
+  const { w, h } = dims(piece, rotation);
+  if (col<0||row<0||col+w>COLS||row+h>ROWS) return false;
+  for (let r=row; r<row+h; r++) for (let c=col; c<col+w; c++) if (isOccupied(c,r,excl)) return false;
+  return true;
+}
+function removePieceAt(col, row) {
+  ap().pieces = getPlaced().filter(pp => {
+    const { w, h } = dims(pp.piece, pp.rotation);
+    return !(col>=pp.col && col<pp.col+w && row>=pp.row && row<pp.row+h);
+  });
+}
+function placedAt(col, row) {
+  return getPlaced().find(pp => {
+    const { w, h } = dims(pp.piece, pp.rotation);
+    return col>=pp.col && col<pp.col+w && row>=pp.row && row<pp.row+h;
+  });
+}
+function placePiece(col, row) {
+  if (!selectedPiece || !canPlace(selectedPiece, col, row, currentRotation)) return;
+  saveHistory();
+  getPlaced().push({ piece:selectedPiece, col, row, rotation:currentRotation, ink:ap().ink });
+  redrawActive(); updateUsage(); updatePieceCount();
+}
+function eraseAt(col, row) { saveHistory(); removePieceAt(col, row); }
+function getCell(e, canvas) {
+  const r = canvas.getBoundingClientRect();
+  return { col:Math.floor((e.clientX-r.left)/CELL), row:Math.floor((e.clientY-r.top)/CELL) };
+}
+
+// ─── PLATE EVENT BINDING ─────────────────────────────────────────────────────
+function bindPlateEvents(hoverC, plateObj) {
+  hoverC.addEventListener('mousemove', e => {
+    const cell = getCell(e, hoverC);
+    hoverCell = cell;
+    document.getElementById('cursorPos').textContent = `col ${cell.col+1}, row ${cell.row+1}`;
+
+    if (tool === 'select') {
+      if (isDraggingSelection && isMouseDown) {
+        const dCol = cell.col - selDragStartCol;
+        const dRow = cell.row - selDragStartRow;
+        if (dCol !== 0 || dRow !== 0) {
+          if (canMoveSelection(dCol, dRow)) {
+            saveHistory();
+            selection.forEach(pp => { pp.col += dCol; pp.row += dRow; });
+            selDragStartCol = cell.col;
+            selDragStartRow = cell.row;
+            redrawActive();
+          }
+        }
+        hoverC.style.cursor = 'grabbing';
+      } else if (isMarqueeDrawing && isMouseDown) {
+        marqueeEnd = cell;
+        hoverC.style.cursor = 'crosshair';
+        drawHover();
+      } else {
+        // Hover cursor — grab if over a selected piece
+        const hit = placedAt(cell.col, cell.row);
+        hoverC.style.cursor = (hit && selection.includes(hit)) ? 'grab' : 'crosshair';
+      }
+      return;
+    }
+
+    hoverC.style.cursor = (tool==='place' && placedAt(cell.col,cell.row)) ? 'grab' : (tool==='erase' ? 'crosshair' : 'default');
+    drawHover();
+    if (isMouseDown) {
+      if (tool==='place') placePiece(cell.col, cell.row);
+      else if (tool==='erase') { eraseAt(cell.col, cell.row); redrawActive(); updateUsage(); }
+    }
+  });
+
+  hoverC.addEventListener('mouseleave', () => {
+    hoverCell = null;
+    ap().dom.hCtx.clearRect(0,0,W,H);
+    document.getElementById('cursorPos').textContent = '—';
+  });
+
+  hoverC.addEventListener('wheel', e => {
+    e.preventDefault();
+    rotate(e.deltaY > 0 ? 90 : -90);
+  }, { passive:false });
+
+  hoverC.addEventListener('mousedown', e => {
+    if (e.button === 1) { e.preventDefault(); return; }
+    if (e.button !== 0) return;
+    isMouseDown = true;
+    const cell = getCell(e, hoverC);
+
+    if (tool === 'select') {
+      const hit = placedAt(cell.col, cell.row);
+      if (hit && selection.includes(hit)) {
+        // Start dragging the selection
+        isDraggingSelection = true;
+        isMarqueeDrawing = false;
+        selDragStartCol = cell.col;
+        selDragStartRow = cell.row;
+      } else {
+        // Start a new marquee
+        clearSelection();
+        isMarqueeDrawing = true;
+        isDraggingSelection = false;
+        marqueeStart = cell;
+        marqueeEnd = cell;
+      }
+      return;
+    }
+
+    const hit = placedAt(cell.col, cell.row);
+    if (hit && tool === 'place') {
+      saveHistory();
+      ap().pieces = getPlaced().filter(pp => pp !== hit);
+      currentRotation = hit.rotation;
+      selectPiece(hit.piece);
+      redrawActive(); drawHover(); return;
+    }
+    if (tool==='place') placePiece(cell.col, cell.row);
+    else if (tool==='erase') { eraseAt(cell.col, cell.row); redrawActive(); updateUsage(); }
+  });
+
+  hoverC.addEventListener('contextmenu', e => showCtxMenu(e, getCell(e, hoverC)));
+}
+
+document.addEventListener('mouseup', () => {
+  if (tool === 'select') {
+    if (isMarqueeDrawing && marqueeStart && marqueeEnd) {
+      const c1 = Math.min(marqueeStart.col, marqueeEnd.col);
+      const r1 = Math.min(marqueeStart.row, marqueeEnd.row);
+      const c2 = Math.max(marqueeStart.col, marqueeEnd.col) + 1;
+      const r2 = Math.max(marqueeStart.row, marqueeEnd.row) + 1;
+      selectInMarquee(c1, r1, c2, r2);
+      ap().dom.hCtx.clearRect(0,0,W,H);
+    }
+    isMarqueeDrawing = false;
+    isDraggingSelection = false;
+    marqueeStart = null; marqueeEnd = null;
+  }
+  isMouseDown = false;
+});
+
+// ─── VIEWPORT PANNING (middle mouse button) ───────────────────────────────────
+(function() {
+  const wrapper = document.getElementById('canvasWrapper');
+  const inner   = document.getElementById('canvasInner');
+  let panning = false, startX = 0, startY = 0, panX = 0, panY = 0, baseX = 0, baseY = 0;
+
+  function applyTransform() {
+    inner.style.transform = `translate(${panX}px, ${panY}px)`;
+  }
+
+  wrapper.addEventListener('mousedown', e => {
+    if (e.button !== 1) return;
+    e.preventDefault();
+    panning = true;
+    startX = e.clientX; startY = e.clientY;
+    baseX = panX; baseY = panY;
+    wrapper.style.cursor = 'grabbing';
+  });
+
+  window.addEventListener('mousemove', e => {
+    if (!panning) return;
+    panX = baseX + (e.clientX - startX);
+    panY = baseY + (e.clientY - startY);
+    applyTransform();
+  });
+
+  window.addEventListener('mouseup', e => {
+    if (e.button !== 1 || !panning) return;
+    panning = false;
+    wrapper.style.cursor = '';
+  });
+
+  // Prevent the browser's default middle-click scroll cursor
+  wrapper.addEventListener('auxclick', e => { if (e.button === 1) e.preventDefault(); });
+})();
+
+// ─── TOOLS ───────────────────────────────────────────────────────────────────
+function positionOverlay() {
+  const partsVisible = document.getElementById('partsListPanel').classList.contains('visible');
+  const designsVisible = document.getElementById('designsPanel').classList.contains('visible');
+  // designs panel is 340px + 16px gap = 356px; parts list is 180px + 16px gap = 196px
+  let right = 16;
+  if (designsVisible) right = 372;
+  else if (partsVisible) right = 212;
+  document.getElementById('overlayWindow').style.right = right + 'px';
+}
+
+function togglePartsList() {
+  const panel = document.getElementById('partsListPanel');
+  const btn = document.getElementById('partsListBtn');
+  panel.classList.toggle('visible');
+  btn.classList.toggle('active', panel.classList.contains('visible'));
+  if (panel.classList.contains('visible')) updateUsage();
+  positionOverlay();
+}
+
+function setTool(t) {
+  if (tool === 'select' && t !== 'select') clearSelection();
+  tool = t;
+  document.getElementById('toolPlace').classList.toggle('active', t==='place');
+  document.getElementById('toolErase').classList.toggle('active', t==='erase');
+  document.getElementById('toolSelect').classList.toggle('active', t==='select');
+}
+function rotate(deg) {
+  currentRotation = (currentRotation + deg + 360) % 360;
+  
+  drawHover();
+}
+function toggleMirror() {
+  mirrorMode = !mirrorMode;
+  document.getElementById('mirrorBtn').classList.toggle('active', mirrorMode);
+  document.getElementById('mirrorNote').style.display = mirrorMode ? 'block' : 'none';
+  plates.forEach(p => redrawPlate(p));
+  if (overlayMode) renderOverlay();
+}
+function setPlateInk(plateId, hex, swatchRow) {
+  const p = plates.find(pl => pl.id === plateId);
+  if (!p) return;
+  p.ink = hex;
+  p.pieces.forEach(pp => { pp.ink = hex; });
+  p.dom.inkDot.style.background = hex;
+  swatchRow.querySelectorAll('.ink-swatch').forEach(s => s.classList.toggle('active', s.dataset.ink === hex));
+  redrawPlate(p);
+  drawHover();
+  if (overlayMode) renderOverlay();
+}
+
+function setColorMode(mode) {
+  pieceColorMode = mode === 'native';
+  document.getElementById('colorNativeBtn').classList.toggle('active', mode==='native');
+  document.getElementById('colorInkBtn').classList.toggle('active', mode==='ink');
+  const win = document.getElementById('inkPaletteWindow');
+  if (!pieceColorMode) {
+    win.classList.add('visible');
+    renderPaletteSwatches();
+    drawColorWheel(); updateCpPreview();
+  } else {
+    win.classList.remove('visible');
+    document.getElementById('ipwPicker').style.display = 'none';
+  }
+  plates.forEach(p => p.dom.inkDot.classList.toggle('visible', !pieceColorMode));
+  plates.forEach(p => redrawPlate(p));
+  drawHover();
+  if (overlayMode) renderOverlay();
+}
+
+// ─── PIECE LIST ───────────────────────────────────────────────────────────────
+function buildPieceList() {
+  const list = document.getElementById('piecesList');
+  list.innerHTML = '';
+  const filtered = colorFilter==='all' ? PIECES : PIECES.filter(p => p.color===colorFilter);
+
+  // Scale so the largest piece (3×3) fills the canvas, smaller pieces scale proportionally.
+  // This keeps size differences visually clear while keeping 1×1 pieces legible.
+  const CANVAS_SIZE = 48;
+  const sizeMap = { 1: 24, 2: 32, 3: 48 };
+
+  filtered.forEach(p => {
+    const item = document.createElement('div');
+    item.className = 'piece-item' + (selectedPiece?.id===p.id ? ' selected' : '');
+    item.dataset.id = p.id;
+
+    const cvs = document.createElement('canvas');
+    cvs.width = CANVAS_SIZE; cvs.height = CANVAS_SIZE;
+    const ctx = cvs.getContext('2d');
+    const maxDim = Math.max(p.w, p.h);
+    const pxSize = sizeMap[maxDim] || 48;
+    const pw = p.w * (pxSize / maxDim);
+    const ph = p.h * (pxSize / maxDim);
+    const ox = (CANVAS_SIZE - pw) / 2;
+    const oy = (CANVAS_SIZE - ph) / 2;
+    drawShape(ctx, p, ox, oy, pw, ph, 0, COLORS[p.color], false, false);
+    cvs.className = 'piece-preview';
+
+    const info = document.createElement('div');
+    info.className = 'piece-info';
+    info.innerHTML = `<div class="piece-id">${p.id}</div><div class="piece-name">${p.w}×${p.h} ${p.name}</div>`;
+
+    item.appendChild(cvs); item.appendChild(info);
+    item.addEventListener('click', () => selectPiece(p));
+    list.appendChild(item);
+  });
+}
+function selectPiece(p) {
+  selectedPiece = p;
+  document.querySelectorAll('.piece-item').forEach(el => el.classList.toggle('selected', el.dataset.id===p.id));
+  document.getElementById('selectedInfo').textContent = `${p.id} — ${p.name} (${p.w}×${p.h})`;
+  if (tool==='erase') setTool('place');
+}
+document.querySelectorAll('.color-dot').forEach(dot => {
+  dot.addEventListener('click', () => {
+    colorFilter = dot.dataset.filter;
+    document.querySelectorAll('.color-dot').forEach(d => d.classList.toggle('active', d===dot));
+    buildPieceList();
+  });
+});
+
+// ─── USAGE PANEL ──────────────────────────────────────────────────────────────
+function updateUsage() {
+  const counts = {};
+  getPlaced().forEach(pp => { counts[pp.piece.id] = (counts[pp.piece.id]||0)+1; });
+  const panel = document.getElementById('usagePanel');
+  panel.innerHTML = '';
+  if (!Object.keys(counts).length) {
+    panel.innerHTML = '<div style="padding:12px;font-family:IBM Plex Mono,monospace;font-size:14px;opacity:0.4;text-align:center">Place pieces<br>to track usage</div>';
+    return;
+  }
+  Object.entries(counts).sort().forEach(([id, count]) => {
+    const p = PIECES.find(x => x.id===id);
+    const row = document.createElement('div');
+    row.className = 'palette-row';
+    row.innerHTML = `<div class="palette-row-label" style="color:${COLORS[p.color]}">${id.replace('PX-','')}</div><div class="palette-count">×${count}</div>`;
+    panel.appendChild(row);
+  });
+}
+function updatePieceCount() {
+  const n = getPlaced().length;
+  document.getElementById('pieceCount').textContent = `${n} piece${n!==1?'s':''} on ${ap().label}`;
+}
+
+// ─── CONTEXT MENU ─────────────────────────────────────────────────────────────
+const ctxMenu = document.getElementById('ctxMenu');
+let ctxFilter = 'all', ctxTargetCell = null;
+
+function ctxSetFilter(f, btn) {
+  ctxFilter = f;
+  document.querySelectorAll('.ctx-filter-btn').forEach(b => b.classList.toggle('active', b===btn));
+  buildCtxPieces();
+}
+function buildCtxPieces() {
+  const container = document.getElementById('ctxPieces');
+  container.innerHTML = '';
+  (ctxFilter==='all' ? PIECES : PIECES.filter(p=>p.color===ctxFilter)).forEach(p => {
+    const item = document.createElement('div');
+    item.className = 'ctx-item' + (selectedPiece?.id===p.id ? ' active-piece' : '');
+    const dot = document.createElement('div');
+    dot.className = 'ctx-piece-dot'; dot.style.background = COLORS[p.color];
+    const lbl = document.createElement('span');
+    lbl.textContent = `${p.id} — ${p.name} (${p.w}×${p.h})`;
+    item.appendChild(dot); item.appendChild(lbl);
+    item.addEventListener('click', () => { selectPiece(p); if (ctxTargetCell) placePiece(ctxTargetCell.col, ctxTargetCell.row); hideCtxMenu(); });
+    container.appendChild(item);
+  });
+}
+function showCtxMenu(e, cell) {
+  e.preventDefault(); ctxTargetCell = cell;
+  document.getElementById('ctxErase').style.display = placedAt(cell.col,cell.row) ? 'flex' : 'none';
+  document.getElementById('ctxHeader').textContent = `${ap().label} — col ${cell.col+1}, row ${cell.row+1}`;
+  buildCtxPieces();
+  let x=e.clientX, y=e.clientY;
+  if (x+215>window.innerWidth) x=window.innerWidth-219;
+  if (y+330>window.innerHeight) y=window.innerHeight-334;
+  ctxMenu.style.left=x+'px'; ctxMenu.style.top=y+'px';
+  ctxMenu.classList.add('visible');
+}
+function hideCtxMenu() { ctxMenu.classList.remove('visible'); ctxTargetCell=null; }
+function ctxDoErase() { if (ctxTargetCell) { eraseAt(ctxTargetCell.col,ctxTargetCell.row); redrawActive(); drawHover(); updateUsage(); } hideCtxMenu(); }
+document.addEventListener('click', e => { if (!ctxMenu.contains(e.target)) hideCtxMenu(); });
+
+// ─── CLEAR & EXPORT ───────────────────────────────────────────────────────────
+function clearActivePlate() {
+  if (plates[activePlateIdx].pieces.length === 0) return;
+  if (!confirm(`Clear all pieces on ${plates[activePlateIdx].label}?`)) return;
+  saveHistory();
+  plates[activePlateIdx].pieces = [];
+  redrawActive(); drawHover(); updateUsage(); updatePieceCount();
+}
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const ec = document.createElement('canvas');
+  ec.width = W+40; ec.height = H+60;
+  const et = ec.getContext('2d');
+  et.fillStyle='#F5F0E8'; et.fillRect(0,0,ec.width,ec.height);
+  et.fillStyle='white'; et.fillRect(20,40,W,H);
+  et.drawImage(ap().dom.gridC, 20, 40);
+  et.drawImage(ap().dom.piecesC, 20, 40);
+  et.strokeStyle='#1A1A1A'; et.lineWidth=2.5; et.strokeRect(20,40,W,H);
+  et.fillStyle='#1A1A1A'; et.font='bold 11px monospace';
+  et.fillText(`PRIXEL PLANNER — ${ap().label.toUpperCase()} — 16×24`, 20, 28);
+  if (mirrorMode) { et.fillStyle='#F5C842'; et.fillText('⇄ MIRROR', W-40, 28); }
+  const a = document.createElement('a');
+  a.download = `prixel-${ap().label.toLowerCase().replace(/\s+/g,'-')}.png`;
+  a.href = ec.toDataURL('image/png'); a.click();
+});
+
+// ─── DESIGNS ──────────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'prixel-designs';
+let currentDesignId = null; // null = unsaved / new project
+
+function getDesigns() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; }
+}
+function putDesigns(arr) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+}
+
+function serializeProject() {
+  return {
+    plates: plates.map(p => ({
+      id: p.id, label: p.label, ink: p.ink,
+      pieces: JSON.parse(JSON.stringify(p.pieces))
+    })),
+    activePlateIdx,
+    mirrorMode,
+    pieceColorMode,
+    customInks: [...inkPalette]
+  };
+}
+
+function renderDesignThumbnail(data) {
+  // Composite all plates onto a single small canvas for the thumbnail
+  const THUMB_W = 150, THUMB_H = Math.round(THUMB_W * (H / W));
+  const scale = THUMB_W / W;
+  const cvs = document.createElement('canvas');
+  cvs.width = THUMB_W; cvs.height = THUMB_H;
+  const ctx = cvs.getContext('2d');
+  ctx.fillStyle = 'white';
+  ctx.fillRect(0, 0, THUMB_W, THUMB_H);
+  // Draw grid lines
+  ctx.strokeStyle = 'rgba(0,0,0,0.07)';
+  ctx.lineWidth = 0.5;
+  for (let c = 0; c <= COLS; c++) { ctx.beginPath(); ctx.moveTo(c*CELL*scale,0); ctx.lineTo(c*CELL*scale,THUMB_H); ctx.stroke(); }
+  for (let r = 0; r <= ROWS; r++) { ctx.beginPath(); ctx.moveTo(0,r*CELL*scale); ctx.lineTo(THUMB_W,r*CELL*scale); ctx.stroke(); }
+  // Draw pieces from first plate
+  const plate = data.plates[0];
+  if (plate) {
+    plate.pieces.forEach(pp => {
+      const piece = PIECES.find(x => x.id === pp.piece.id);
+      if (!piece) return;
+      const { w, h } = (((pp.rotation%360)+360)%360 === 90 || ((pp.rotation%360)+360)%360 === 270)
+        ? {w:piece.h, h:piece.w} : {w:piece.w, h:piece.h};
+      const fill = data.pieceColorMode ? COLORS[piece.color] : (plate.ink || '#1A1A1A');
+      ctx.save();
+      ctx.scale(scale, scale);
+      drawShape(ctx, piece, pp.col*CELL+1, pp.row*CELL+1, w*CELL-2, h*CELL-2, pp.rotation, fill, false, false);
+      ctx.restore();
+    });
+  }
+  return cvs;
+}
+
+function buildDesignsGrid() {
+  const body = document.getElementById('dpBody');
+  const designs = getDesigns();
+  if (designs.length === 0) {
+    body.innerHTML = '<div class="dp-empty">No saved designs yet.<br>Hit Save to store your work.</div>';
+    return;
+  }
+  const grid = document.createElement('div');
+  grid.className = 'dp-grid';
+  designs.forEach(d => {
+    const card = document.createElement('div');
+    card.className = 'dp-card' + (d.id === currentDesignId ? ' active-design' : '');
+
+    // Thumbnail only
+    const thumb = renderDesignThumbnail(d.data);
+    card.appendChild(thumb);
+
+    // Hover info card slides up from bottom
+    const plateCount = d.data.plates.length;
+    const hover = document.createElement('div');
+    hover.className = 'dp-card-hover';
+    hover.innerHTML = `
+      <div class="dp-card-hover-name" title="${d.name}">${d.name}</div>
+      <div class="dp-card-hover-meta">${plateCount} plate${plateCount!==1?'s':''}</div>
+    `;
+    const actions = document.createElement('div');
+    actions.className = 'dp-card-hover-actions';
+    const loadBtn = document.createElement('button');
+    loadBtn.className = 'dp-card-btn load';
+    loadBtn.textContent = d.id === currentDesignId ? 'Active' : 'Load';
+    loadBtn.disabled = d.id === currentDesignId;
+    loadBtn.onclick = (e) => { e.stopPropagation(); loadDesign(d.id); };
+    const delBtn = document.createElement('button');
+    delBtn.className = 'dp-card-btn del';
+    delBtn.innerHTML = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:middle"><polyline points="3,5 3,14 13,14 13,5"/><line x1="1" y1="5" x2="15" y2="5"/><line x1="6" y1="5" x2="6" y2="2"/><line x1="10" y1="5" x2="10" y2="2"/><line x1="6" y1="2" x2="10" y2="2"/><line x1="6" y1="8" x2="6" y2="12"/><line x1="10" y1="8" x2="10" y2="12"/></svg>`;
+    delBtn.onclick = (e) => { e.stopPropagation(); deleteDesign(d.id); };
+    actions.appendChild(loadBtn);
+    actions.appendChild(delBtn);
+    hover.appendChild(actions);
+    card.appendChild(hover);
+
+    grid.appendChild(card);
+  });
+  body.innerHTML = '';
+  body.appendChild(grid);
+}
+
+function toggleDesignsPanel() {
+  const panel = document.getElementById('designsPanel');
+  const isVisible = panel.classList.toggle('visible');
+  document.getElementById('designsBtn').classList.toggle('active', isVisible);
+  if (isVisible) {
+    buildDesignsGrid();
+    positionOverlay();
+  }
+}
+
+function saveDesign() {
+  if (currentDesignId) {
+    // Overwrite existing
+    const designs = getDesigns();
+    const idx = designs.findIndex(d => d.id === currentDesignId);
+    if (idx !== -1) {
+      designs[idx].data = serializeProject();
+      designs[idx].savedAt = Date.now();
+      putDesigns(designs);
+      buildDesignsGrid();
+      flashSaveBtn();
+      return;
+    }
+  }
+  // First save — show name prompt
+  const panel = document.getElementById('designsPanel');
+  if (!panel.classList.contains('visible')) panel.classList.add('visible');
+  document.getElementById('designsBtn').classList.add('active');
+  buildDesignsGrid();
+  document.getElementById('dpNamePrompt').classList.add('visible');
+  const input = document.getElementById('dpNameInput');
+  input.value = '';
+  setTimeout(() => input.focus(), 50);
+}
+
+function dpConfirmSave() {
+  const name = document.getElementById('dpNameInput').value.trim();
+  if (!name) { document.getElementById('dpNameInput').focus(); return; }
+  const designs = getDesigns();
+  const id = 'design-' + Date.now();
+  designs.unshift({ id, name, savedAt: Date.now(), data: serializeProject() });
+  putDesigns(designs);
+  currentDesignId = id;
+  document.getElementById('dpNamePrompt').classList.remove('visible');
+  buildDesignsGrid();
+  flashSaveBtn();
+}
+
+function dpCancelSave() {
+  document.getElementById('dpNamePrompt').classList.remove('visible');
+}
+
+function flashSaveBtn() {
+  const btn = document.getElementById('saveBtn');
+  btn.classList.add('active');
+  setTimeout(() => { btn.classList.remove('active'); }, 1500);
+}
+
+function loadDesign(id) {
+  const designs = getDesigns();
+  const d = designs.find(x => x.id === id);
+  if (!d) return;
+  if (!confirm(`Load "${d.name}"? Unsaved changes to the current project will be lost.`)) return;
+  applyProjectData(d.data);
+  currentDesignId = id;
+  buildDesignsGrid();
+}
+
+function deleteDesign(id) {
+  const designs = getDesigns();
+  const d = designs.find(x => x.id === id);
+  if (!d) return;
+  if (!confirm(`Delete "${d.name}"? This cannot be undone.`)) return;
+  const filtered = designs.filter(x => x.id !== id);
+  putDesigns(filtered);
+  if (currentDesignId === id) currentDesignId = null;
+  buildDesignsGrid();
+}
+
+function applyProjectData(data) {
+  // Tear down existing plates
+  plates.forEach(p => p.dom.container.remove());
+  plates = []; activePlateIdx = 0; plateCounter = 0;
+  Object.keys(historyMap).forEach(k => delete historyMap[k]);
+  clearSelection();
+
+  // Restore plates
+  data.plates.forEach(pd => {
+    const p = createPlate(pd.label, pd.ink);
+    pd.pieces.forEach(pp => {
+      const piece = PIECES.find(x => x.id === pp.piece.id);
+      if (piece) p.pieces.push({ piece, col: pp.col, row: pp.row, rotation: pp.rotation });
+    });
+  });
+
+  activePlateIdx = Math.min(data.activePlateIdx || 0, plates.length - 1);
+  setActivePlate(activePlateIdx);
+
+  // Restore modes
+  if (data.mirrorMode !== mirrorMode) toggleMirror();
+  if (data.pieceColorMode !== pieceColorMode) setColorMode(data.pieceColorMode ? 'native' : 'ink');
+
+  // Restore custom inks (filter out any defaults that may have been serialized in old saves)
+  inkPalette = (data.customInks || []).filter(h => !DEFAULT_INKS.includes(h));
+  selectedSwatchHex = null;
+  if (!pieceColorMode) renderPaletteSwatches();
+
+  plates.forEach(p => redrawPlate(p));
+  syncOverlayBtn();
+  buildPieceList();
+  updateUsage(); updatePieceCount();
+}
+
+function newProject() {
+  const hasContent = plates.some(p => p.pieces.length > 0);
+  if (hasContent && !confirm('Start a new project? Unsaved changes will be lost.')) return;
+
+  // Tear down
+  currentDesignId = null;
+  plates.forEach(p => p.dom.container.remove());
+  plates = []; activePlateIdx = 0; plateCounter = 0;
+  selection = []; isMarqueeDrawing = false; isDraggingSelection = false;
+  inkPalette = []; selectedSwatchHex = null;
+  Object.keys(historyMap).forEach(k => delete historyMap[k]);
+
+  // Reset mirror without calling toggleMirror (which redraws)
+  mirrorMode = false;
+  document.getElementById('mirrorBtn').classList.remove('active');
+  document.getElementById('mirrorNote').style.display = 'none';
+
+  // Reset color mode without calling setColorMode (which redraws)
+  pieceColorMode = true;
+  document.getElementById('colorNativeBtn').classList.add('active');
+  document.getElementById('colorInkBtn').classList.remove('active');
+  document.getElementById('inkPaletteWindow').classList.remove('visible');
+
+  // Build new plate
+  const p = createPlate('Plate 1');
+  setActivePlate(0);
+  redrawPlate(p);
+  syncOverlayBtn();
+  buildPieceList();
+  updateUsage(); updatePieceCount();
+  document.getElementById('canvasInner').style.transform = '';
+}
+
+// ─── KEYBOARD ─────────────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.target.tagName==='INPUT') return;
+  if ((e.ctrlKey||e.metaKey) && e.key==='z') { e.preventDefault(); undo(); return; }
+  if ((e.ctrlKey||e.metaKey) && e.key==='s') { e.preventDefault(); saveDesign(); return; }
+  if (e.key==='r'||e.key==='R') rotate(90);
+  if (e.key==='e'||e.key==='E') setTool(tool==='erase'?'place':'erase');
+  if (e.key==='p'||e.key==='P') setTool('place');
+  if (e.key==='s'||e.key==='S') setTool('select');
+  if (e.key==='m'||e.key==='M') toggleMirror();
+  if (e.key==='Escape') { selectedPiece=null; clearSelection(); hideCtxMenu(); buildPieceList(); }
+});
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+createPlate('Plate 1');
+setActivePlate(0);
+buildPieceList();
+updateUsage();
+renderPaletteSwatches();
+</script>
+</body>
+</html>
