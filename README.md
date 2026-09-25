@@ -2,6 +2,10 @@
 
 A browser-based plate planning tool built around the **Prixel Press** piece system. Design layouts, simulate ink colors, track piece counts, and save your work — all in a single HTML file with no install required.
 
+## Launch
+
+**[→ Open Prixel Planner](https://tamag0tcha.github.io/prixel-planner/prixel-planner-share.html)**
+
 ---
 
 ## Background
