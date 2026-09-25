@@ -4,7 +4,7 @@ A browser-based plate planning tool built around the **Prixel Press** piece syst
 
 ## Launch
 
-**[→ Open Prixel Planner](https://tamag0tcha.github.io/prixel-planner/prixel-planner-share.html)**
+**[→ Open Prixel Planner](https://tamag0tcha.github.io/prixel-planner/prixel-planner-v1.html)**
 
 ---
 
@@ -33,7 +33,7 @@ Prixel Planner was built to solve that.
 
 ## How to Use
 
-1. Download `prixel-planner-share.html`
+1. Download `prixel-planner-v1.html`
 2. Open it in any modern browser (Chrome, Firefox, Safari, Edge)
 3. Start designing
 
